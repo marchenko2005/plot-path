@@ -1,0 +1,37 @@
+const sql = require('mssql');
+const config = require('../db/sqlConfig');
+
+const tagModel = {
+    async getAll() {
+        const pool = await sql.connect(config);
+        const result = await pool.request().query('SELECT * FROM Tags');
+        return result.recordset;
+    },
+
+    async getById(id) {
+        const pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('Id', sql.UniqueIdentifier, id)
+            .query('SELECT * FROM Tags WHERE Id = @Id');
+        return result.recordset[0];
+    },
+
+    async getByType(type) {
+        const pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('Type', sql.NVarChar, type)
+            .query('SELECT * FROM Tags WHERE Type = @Type');
+        return result.recordset;
+    },
+
+    async searchByName(name) {
+    const pool = await sql.connect(config);
+    const result = await pool.request()
+        .input('Name', sql.NVarChar, name)
+        .query('SELECT * FROM Tags WHERE Name LIKE \'%\' + @Name + \'%\'');
+    return result.recordset;
+    }
+
+};
+
+module.exports = tagModel;

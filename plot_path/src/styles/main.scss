@@ -1,0 +1,19 @@
+.plot-path {
+    .v-container {
+        max-width: 1336px;
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+        transition: all 0.3s ease-in;
+    }
+
+    img {
+        max-width: 100%;
+    }
+}
+
+.primary {
+    color: rgb(var(--v-theme-primary));
+}
