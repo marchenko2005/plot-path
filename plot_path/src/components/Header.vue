@@ -88,7 +88,7 @@
   onMounted(() => {
     const stored = localStorage.getItem('user');
     console.log('[Header] Raw user from localStorage:', stored);
-
+    const info = localStorage.getItem('userInfo');
     if (stored) {
       try {
         user.value = JSON.parse(stored);

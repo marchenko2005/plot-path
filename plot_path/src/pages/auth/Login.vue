@@ -88,16 +88,16 @@
       if (!res.ok) throw new Error('Invalid login');
 
       const { accessToken, refreshToken } = await res.json();
-
-      console.log('[Login] Login successful');
-      console.log('[Login] accessToken:', accessToken);
-      console.log('[Login] refreshToken:', refreshToken);
+      const resUser = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const userText = await resUser.text();
+      const userProfile = JSON.parse(userText);
+      const actualUser = userProfile.user;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('user', JSON.stringify({ email: email.value }));
-      console.log('[Login] User saved to localStorage:', { email: email.value });
-      console.log('[Login] Tokens saved to localStorage');
+      localStorage.setItem('user', JSON.stringify({ email: email.value, AvatarUrl: actualUser.AvatarUrl, username: actualUser.Username }));
 
       router.push({ path: '/routes' });
     } catch (error) {
