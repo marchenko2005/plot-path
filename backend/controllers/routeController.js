@@ -57,27 +57,34 @@ const routeController = {
         }
         },
     
-    async getBooksForRoute(req, res) {
+   async getBooksForRoute(req, res) {
     const { routeId } = req.params;
 
-        try {
-            const pool = await sql.connect(config);
+    try {
+        const pool = await sql.connect(config);
 
-            const result = await pool.request()
-                .input('RouteId', sql.UniqueIdentifier, routeId)
-                .query(`
-                    SELECT b.Id, b.Title, b.Author, b.Description, b.CoverUrl
-                    FROM RouteBooks rb
-                    JOIN Books b ON rb.BookId = b.Id
-                    WHERE rb.RouteId = @RouteId
-                `);
+        const result = await pool.request()
+        .input('RouteId', sql.UniqueIdentifier, routeId)
+        .query(`
+            SELECT 
+            b.Id,
+            b.Title,
+            b.Author,
+            b.Description,
+            b.CoverUrl,
+            @RouteId AS RouteId
+            FROM RouteBooks rb
+            JOIN Books b ON rb.BookId = b.Id
+            WHERE rb.RouteId = @RouteId
+        `);
 
-            res.json(result.recordset);
-        } catch (error) {
-            console.error('Error fetching books for route:', error);
-            res.status(500).json({ error: 'Failed to fetch books for route' });
-        }
-    },
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error fetching books for route:', error);
+        res.status(500).json({ error: 'Failed to fetch books for route' });
+    }
+},
+
 
     // Отримати щоденні маршрути + маршрут місяця
     async  getDailyRoutes(req, res) {

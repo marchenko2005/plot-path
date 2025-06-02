@@ -58,7 +58,7 @@
                 <img alt="Award" :src="award.ImageUrl" />
                 {{ award.Name }}
               </div>
-              <a class="all-awards" href="#">All awards...</a>
+              <router-link class="all-awards" to="/awards">All awards...</router-link>
             </div>
           </div>
         </v-col>

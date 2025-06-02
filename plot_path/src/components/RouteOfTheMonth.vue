@@ -12,7 +12,7 @@
             class="book-cover"
             cover
             :src="`${book.CoverUrl}`"
-            @click="() => openBook(book.Id)"
+            @click="() => openBook(book.RouteId, book.Id)"
           />
         </div>
 
@@ -46,15 +46,13 @@
 <script lang="ts" setup>
   import { defineProps } from 'vue';
   import type { Book } from '@/types/general.interface';
-  import { useRouter, useRoute } from 'vue-router';
+  import { useRouter } from 'vue-router';
 
   const router = useRouter();
-  const route = useRoute();
 
-  const openBook = (bookId: string) => {
-    const routeId = route.query.routeId;
+  const openBook = (routeId: string, bookId: string) => {
     router.push({
-      path: `/books/${bookId}`,
+      path: `/books/${routeId}/${bookId}`,
       query: { routeId },
     });
   }

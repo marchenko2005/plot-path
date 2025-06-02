@@ -33,6 +33,36 @@ const bookController = {
             console.error('Error fetching book by ID:', error);
             res.status(500).json({ error: 'Failed to fetch book' });
         }
+    },
+   async getReviewsForBook(req, res) {
+    const { bookId } = req.params;
+
+    try {
+        const pool = await sql.connect(config);
+
+        const result = await pool.request()
+        .input('BookId', sql.UniqueIdentifier, bookId)
+        .query(`
+            SELECT 
+            r.Id,
+            r.UserId,
+            r.BookId,
+            r.Rating,
+            r.ReviewText,
+            r.CreatedAt,
+            u.Username AS UserName,
+            u.AvatarUrl AS UserAvatar
+            FROM BookReviews r
+            JOIN Users u ON u.Id = r.UserId
+            WHERE r.BookId = @BookId
+            ORDER BY r.CreatedAt DESC
+        `);
+
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error fetching reviews for book:', error);
+        res.status(500).json({ error: 'Failed to fetch reviews for book' });
+    }
     }
 };
 

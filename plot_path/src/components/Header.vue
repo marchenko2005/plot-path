@@ -68,7 +68,7 @@
 
   const { showImage, links } = defineProps<{
     showImage?: boolean;
-    links: { label: string; path: string }[];
+    links?: { label: string; path: string }[];
   }>();
 
   const router = useRouter();

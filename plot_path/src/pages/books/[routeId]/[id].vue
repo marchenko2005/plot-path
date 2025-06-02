@@ -41,7 +41,7 @@
     <div v-if="user" class="rate-section text-center">
       <h3>What do you think?</h3>
       <v-avatar class="my-4" size="64">
-        <img alt="User avatar" :src="user.avatar" />
+        <img alt="User avatar" :src="user.AvatarUrl || ''">
       </v-avatar>
 
       <v-rating v-model="userRating" color="amber" half-increments size="32" />
@@ -72,9 +72,9 @@
       />
     </div>
 
-    <div v-if="book.Reviews?.length" class="review-section">
+    <div v-if="reviews.length" class="review-section">
       <h3>Reviews</h3>
-      <div v-for="review in book.Reviews" :key="review.Id" class="review-card">
+      <div v-for="review in reviews" :key="review.Id" class="review-card">
         <v-avatar class="me-4" size="48">
           <img :src="review.UserAvatar" />
         </v-avatar>
@@ -89,7 +89,7 @@
               readonly
             />
           </div>
-          <p>{{ showFull[review.Id] ? review.Text : truncate(review.Text, 180) }}</p>
+          <p>{{ showFull[review.Id] ? review.ReviewText : truncate(review.ReviewText, 180) }}</p>
           <a class="show-toggle" @click="toggleShowMore(review.Id)">
             {{ showFull[review.Id] ? 'Show less' : 'Show more' }}
           </a>
@@ -107,12 +107,14 @@
   import { storeToRefs } from 'pinia';
   import Header from '@/components/Header.vue';
   import Footer from '@/components/Footer.vue';
+  import type { Review } from '@/types/general.interface';
 
   const route = useRoute();
   const bookId = route.params.id as string;
+  const routeId = route.query.routeId as string;
   const API = 'http://localhost:3000/api';
   const token = localStorage.getItem('accessToken') || '';
-
+  const reviews = ref<Review[]>([]);
   const { user } = storeToRefs(useUserStore());
 
   const book = ref<any>(null);
@@ -144,20 +146,45 @@
         RatingCount: data.RatingCount || 0,
         ReviewCount: data.ReviewCount || 0,
         Tags: data.Tags || [],
-        Reviews: data.Reviews || [],
       };
     } catch (err) {
       console.error('[Book Page] Failed to load book:', err);
     }
   };
 
-  onMounted(loadBook);
-
   const truncatedDescription = computed(() =>
     book.value?.Description.length > 300
       ? book.value.Description.slice(0, 300) + '...'
       : book.value.Description
   );
+  const getReviews = async () => {
+    try {
+      const res = await fetch(`${API}/books/${bookId}/reviews`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch reviews');
+      }
+
+      const raw = await res.json();
+
+      console.log('[getReviews] Raw response:', raw);
+
+      reviews.value = [...raw]
+      console.log('[getReviews] Parsed reviews:', reviews.value);
+    } catch (err) {
+      console.error('[Book Page] Failed to load reviews:', err);
+    }
+  };
+
+  onMounted(async () => {
+    await loadBook();
+    await getReviews();
+  });
 
   function toggleShowMore (id: string) {
     showFull.value[id] = !showFull.value[id];
@@ -169,7 +196,6 @@
 
   async function saveReview () {
     try {
-      const routeId = route.query.routeId as string || ''; // беремо з URL ?routeId=...
 
       if (!routeId || !book.value?.Id) {
         throw new Error('Missing routeId or bookId');
@@ -203,6 +229,7 @@
       userRating.value = 0;
 
       await loadBook(); // перезавантажити дані книги після успішного відгуку
+      await getReviews(); // перезавантажити відгуки
     } catch (err) {
       console.error('[Review] Error submitting review:', err);
     }
