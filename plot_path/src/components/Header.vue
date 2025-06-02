@@ -20,9 +20,9 @@
               <v-btn icon v-bind="props">
                 <v-avatar color="brown" size="large">
                   <v-img
-                    v-if="user.avatarUrl"
+                    v-if="user.AvatarUrl"
                     alt="Avatar"
-                    :src="user.avatarUrl"
+                    :src="`http://localhost:3001${user.AvatarUrl}`"
                   />
                 </v-avatar>
               </v-btn>
@@ -32,9 +32,9 @@
                 <div class="mx-auto text-center">
                   <v-avatar color="brown" size="large">
                     <v-img
-                      v-if="user.avatarUrl"
+                      v-if="user.AvatarUrl"
                       alt="Avatar"
-                      :src="user.avatarUrl"
+                      :src="`http://localhost:3001${user.AvatarUrl}`"
                     />
                   </v-avatar>
                   <h3>{{ user.username }}</h3>
@@ -82,20 +82,13 @@
     id: string;
     username: string;
     email: string;
-    avatarUrl: string | null;
+    AvatarUrl: string | null;
   } | null>(null);
 
   onMounted(() => {
     const stored = localStorage.getItem('user');
-    console.log('[Header] Raw user from localStorage:', stored);
-    const info = localStorage.getItem('userInfo');
     if (stored) {
-      try {
-        user.value = JSON.parse(stored);
-        console.log('[Header] Parsed user:', user.value);
-      } catch (e) {
-        console.warn('[Header] Failed to parse user:', e);
-      }
+      user.value = JSON.parse(stored);
     } else {
       console.log('[Header] No user found in localStorage');
     }
