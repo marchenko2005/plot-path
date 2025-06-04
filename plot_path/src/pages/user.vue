@@ -112,7 +112,6 @@
     interests: [],
     awards: [],
   });
-
   const interests = ref<Tag[]>([]); // всі доступні теги
   const routes = ref<Route[]>([]);
   const books2 = ref<Book[]>([]);
@@ -134,6 +133,7 @@
       console.error('[user.vue] Failed to fetch all tags:', err);
     }
   };
+
 
   const fetchProfile = async () => {
     try {
@@ -176,11 +176,12 @@
   const fetchBooks = async (routeId: string): Promise<Book[]> => {
     const res = await fetch(`${API}/routes/${routeId}/books`, { headers });
     const data = await res.json();
-    return data.map((book: any) => ({
+    return data.books.map((book: any) => ({
       ...book,
       CoverUrl: book.CoverUrl?.startsWith('/uploads')
         ? `http://localhost:3001${book.CoverUrl}`
         : book.CoverUrl,
+      progressPercent: data.progressPercent || null,
     }));
   };
 

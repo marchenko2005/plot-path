@@ -22,7 +22,7 @@
                   <v-img
                     v-if="user.AvatarUrl"
                     alt="Avatar"
-                    :src="`http://localhost:3001${user.AvatarUrl}`"
+                    :src="getAvatarUrl()"
                   />
                 </v-avatar>
               </v-btn>
@@ -34,7 +34,7 @@
                     <v-img
                       v-if="user.AvatarUrl"
                       alt="Avatar"
-                      :src="`http://localhost:3001${user.AvatarUrl}`"
+                      :src="getAvatarUrl()"
                     />
                   </v-avatar>
                   <h3>{{ user.username }}</h3>
@@ -93,6 +93,17 @@
       console.log('[Header] No user found in localStorage');
     }
   });
+
+  function getAvatarUrl () {
+    if (!user.value || !user.value.AvatarUrl) {
+      return 'http://localhost:3001/uploads/avatars/default_ava.jpg';
+    }
+
+    return user.value.AvatarUrl.startsWith('/uploads')
+      ? `http://localhost:3001${user.value.AvatarUrl}`
+      : user.value.AvatarUrl;
+  }
+
 
   function handleLogout () {
     localStorage.removeItem('accessToken');

@@ -169,7 +169,7 @@
 
     const data = await res.json();
 
-    return data.map((book: any) => {
+    return data.books.map((book: any) => {
       const fullCoverUrl = book.CoverUrl?.startsWith('/uploads')
         ? `http://localhost:3001${book.CoverUrl}`
         : book.CoverUrl;
@@ -177,6 +177,7 @@
       return {
         ...book,
         CoverUrl: fullCoverUrl,
+        progressPercent: data.progressPercent || null,
       };
     });
   };

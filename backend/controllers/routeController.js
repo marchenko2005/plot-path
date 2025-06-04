@@ -2,6 +2,7 @@ const routeModel = require('../models/route');
 const sql = require('mssql');
 const config = require('../db/sqlConfig');
 const { v4: uuidv4 } = require('uuid');
+const jwt = require('../utils/jwtHelper');
 
 const routeController = {
 
@@ -56,36 +57,81 @@ const routeController = {
             res.status(500).json({ error: 'Failed to fetch route progress' });
         }
         },
-    
    async getBooksForRoute(req, res) {
-    const { routeId } = req.params;
+        const { routeId } = req.params;
+        let userId = null;
 
-    try {
-        const pool = await sql.connect(config);
+        // Спроба витягти userId з токена
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            try {
+                const payload = jwt.verifyToken(token); // Перевірка токена
+                userId = payload.userId;
+                console.log('[getBooksForRoute] Authenticated user:', userId);
+            } catch (err) {
+                console.warn('[getBooksForRoute] Invalid token. Proceeding without user context.');
+            }
+        } else {
+            console.log('[getBooksForRoute] No token provided. Public access.');
+        }
 
-        const result = await pool.request()
-        .input('RouteId', sql.UniqueIdentifier, routeId)
-        .query(`
-            SELECT 
-            b.Id,
-            b.Title,
-            b.Author,
-            b.Description,
-            b.CoverUrl,
-            @RouteId AS RouteId
-            FROM RouteBooks rb
-            JOIN Books b ON rb.BookId = b.Id
-            WHERE rb.RouteId = @RouteId
-        `);
+        try {
+            const pool = await sql.connect(config);
 
-        res.json(result.recordset);
-    } catch (error) {
-        console.error('Error fetching books for route:', error);
-        res.status(500).json({ error: 'Failed to fetch books for route' });
-    }
-},
+            // Отримати всі книги маршруту
+            const allBooksResult = await pool.request()
+                .input('RouteId', sql.UniqueIdentifier, routeId)
+                .query(`
+                    SELECT 
+                        b.Id,
+                        b.Title,
+                        b.Author,
+                        b.Description,
+                        b.CoverUrl,
+                        @RouteId AS RouteId
+                    FROM RouteBooks rb
+                    JOIN Books b ON rb.BookId = b.Id
+                    WHERE rb.RouteId = @RouteId
+                    ORDER BY rb.Position
+                `);
 
+            const books = allBooksResult.recordset;
 
+            // Якщо користувач є — додати прогрес
+            if (userId) {
+                const readBooksResult = await pool.request()
+                    .input('UserId', sql.UniqueIdentifier, userId)
+                    .input('RouteId', sql.UniqueIdentifier, routeId)
+                    .query(`
+                        SELECT BookId
+                        FROM UserBookProgress
+                        WHERE UserId = @UserId AND RouteId = @RouteId AND IsRead = 1
+                    `);
+
+                const readBookIds = new Set(readBooksResult.recordset.map(r => r.BookId));
+                const booksWithProgress = books.map(book => ({
+                    ...book,
+                    isRead: readBookIds.has(book.Id),
+                }));
+
+                const progressPercent = Math.round((readBookIds.size / books.length) * 100);
+
+                return res.json({
+                    routeId,
+                    progressPercent,
+                    books: booksWithProgress,
+                });
+            }
+
+            // Публічний доступ — повертаємо лише книги
+            return res.json({ routeId, books });
+
+        } catch (error) {
+            console.error('Error fetching books for route:', error);
+            res.status(500).json({ error: 'Failed to fetch books for route' });
+        }
+    },
     // Отримати щоденні маршрути + маршрут місяця
     async  getDailyRoutes(req, res) {
         const userId = req.user.userId;

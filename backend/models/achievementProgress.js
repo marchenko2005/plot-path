@@ -1,8 +1,6 @@
 const sql = require('mssql');
 const config = require('../db/sqlConfig');
 
-// Основна функція: викликається з userController
-// У module.exports:
 async function processBadge(userId, badgeName, eventPayload = {}) {
   const pool = await sql.connect(config);
   const badgeQuery = await pool.request()
@@ -16,9 +14,8 @@ async function processBadge(userId, badgeName, eventPayload = {}) {
 
   const badge = badgeQuery.recordset[0];
   const awarded = await processBadgeInternal(userId, badge.Id, eventPayload);
-  return awarded ? badge : null;
+  return awarded;
 }
-
 
 async function processBadgeInternal(userId, badgeId, eventPayload = {}) {
   const pool = await sql.connect(config);
@@ -26,18 +23,19 @@ async function processBadgeInternal(userId, badgeId, eventPayload = {}) {
     .input('BadgeId', sql.UniqueIdentifier, badgeId)
     .query('SELECT * FROM Badges WHERE Id = @BadgeId');
 
-  if (!result.recordset.length) return;
+  if (!result.recordset.length) return null;
   const badge = result.recordset[0];
 
   switch (badge.Type) {
     case 'count':
-      return handleCountBadge(pool, userId, badge);
+      return await handleCountBadge(pool, userId, badge);
     case 'genre_unique':
-      return handleGenreBadge(pool, userId, badge);
+      return await handleGenreBadge(pool, userId, badge);
     case 'time_limit':
-      return handleTimeBadge(pool, userId, badge, eventPayload);
+      return await handleTimeBadge(pool, userId, badge, eventPayload);
     default:
       console.warn(`Невідомий тип нагороди: ${badge.Type}`);
+      return null;
   }
 }
 
@@ -57,12 +55,11 @@ async function awardBadge(pool, userId, badgeId) {
       .input('BadgeId', sql.UniqueIdentifier, badgeId)
       .query('SELECT * FROM Badges WHERE Id = @BadgeId');
 
-    return badgeInfo.recordset[0]; 
+    return badgeInfo.recordset[0]; // 🟢 Повертаємо повний об'єкт нагороди
   }
 
   return null;
 }
-
 
 async function handleCountBadge(pool, userId, badge) {
   const progress = await pool.request()
@@ -95,12 +92,13 @@ async function handleCountBadge(pool, userId, badge) {
   }
 
   if (current >= badge.RequiredValue) {
-    await awardBadge(pool, userId, badge.Id);
+    return await awardBadge(pool, userId, badge.Id);
   }
+
+  return null;
 }
 
 async function handleGenreBadge(pool, userId, badge) {
-  // Вибираємо всі книги з маршрутів зі статусом 'completed'
   const books = await pool.request()
     .input('UserId', sql.UniqueIdentifier, userId)
     .query(`
@@ -110,10 +108,10 @@ async function handleGenreBadge(pool, userId, badge) {
       WHERE ubp.UserId = @UserId AND ubp.IsRead = 1 AND ur.Status = 'completed'
     `);
 
-  if (!books.recordset.length) return;
+  if (!books.recordset.length) return null;
 
   const bookIds = books.recordset.map(r => `'${r.BookId}'`).join(',');
-  if (!bookIds) return;
+  if (!bookIds) return null;
 
   const genres = await pool.request().query(`
     SELECT DISTINCT TagId 
@@ -150,13 +148,15 @@ async function handleGenreBadge(pool, userId, badge) {
   }
 
   if (uniqueGenresCount >= badge.RequiredValue) {
-    await awardBadge(pool, userId, badge.Id);
+    return await awardBadge(pool, userId, badge.Id);
   }
+
+  return null;
 }
 
 async function handleTimeBadge(pool, userId, badge, eventPayload) {
   const { routeId } = eventPayload;
-  if (!routeId) return;
+  if (!routeId) return null;
 
   const route = await pool.request()
     .input('UserId', sql.UniqueIdentifier, userId)
@@ -164,13 +164,13 @@ async function handleTimeBadge(pool, userId, badge, eventPayload) {
     .query('SELECT StartedAt, CompletedAt FROM UserRoutes WHERE UserId = @UserId AND RouteId = @RouteId');
 
   const record = route.recordset[0];
-  if (!record || !record.StartedAt || !record.CompletedAt) return;
+  if (!record || !record.StartedAt || !record.CompletedAt) return null;
 
   const started = new Date(record.StartedAt);
   const completed = new Date(record.CompletedAt);
   const hoursTaken = (completed - started) / (1000 * 60 * 60);
 
-  if (hoursTaken > badge.TimeLimitHours) return;
+  if (hoursTaken > badge.TimeLimitHours) return null;
 
   const progress = await pool.request()
     .input('UserId', sql.UniqueIdentifier, userId)
@@ -198,7 +198,7 @@ async function handleTimeBadge(pool, userId, badge, eventPayload) {
       `);
   }
 
-  await awardBadge(pool, userId, badge.Id);
+  return await awardBadge(pool, userId, badge.Id);
 }
 
 module.exports = { processBadge };
