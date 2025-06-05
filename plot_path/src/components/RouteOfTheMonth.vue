@@ -24,8 +24,8 @@
             :style="{ left: `${(index / (books.length - 1)) * 100}%`, backgroundColor: buttons ? buttons[0].color : '#d98b9c' }"
           />
         </div>
+        <span v-if="books[0]?.progressPercent">{{ books[0]?.progressPercent }}%</span>
       </v-sheet>
-
       <div class="actions">
         <v-btn
           v-for="(button, index) in buttons"

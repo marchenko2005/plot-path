@@ -5,6 +5,7 @@ export interface Book {
   Description: string;
   CoverUrl: string;
   RouteId: string;
+  progressPercent: number;
 }
 export interface Review {
   Id: string;

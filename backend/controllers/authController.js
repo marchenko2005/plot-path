@@ -5,7 +5,7 @@ const config = require('../db/sqlConfig');
 
 // Генерація токену
 const generateToken = (user) =>
-  jwt.sign({ userId: user.Id, email: user.Email }, process.env.JWT_SECRET, { expiresIn: '15m' });
+  jwt.sign({ userId: user.Id, email: user.Email }, process.env.JWT_SECRET, { expiresIn: '15d' });
 
 const generateRefreshToken = (user) =>
   jwt.sign({ userId: user.Id }, process.env.JWT_SECRET, { expiresIn: '7d' });

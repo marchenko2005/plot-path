@@ -53,7 +53,7 @@
       const data = await res.json();
       console.log('[fetchBooks] Raw data:', data);
 
-      return data.map((book: any) => {
+      return data.books.map((book: any) => {
         const fullCoverUrl = book.CoverUrl?.startsWith('/uploads')
           ? `http://localhost:3001${book.CoverUrl}`
           : book.CoverUrl;

@@ -23,7 +23,7 @@
         action: () => startRoute(personalizedRoutes[0].Id)
       }]"
       :subtitle="getRouteInfo(personalizedRoutes[0])"
-      title="1. Combined Genre + Trope"
+      title="1. Most Read Genre-Based Route"
     />
 
     <RouteOfTheMonth
@@ -38,7 +38,7 @@
         action: () => startRoute(personalizedRoutes[1].Id)
       }]"
       :subtitle="getRouteInfo(personalizedRoutes[1])"
-      title="2. Most Read Genre-Based Route"
+      title="2 Theme-Based Route "
     />
 
     <RouteOfTheMonth
@@ -53,7 +53,7 @@
         action: () => startRoute(personalizedRoutes[2].Id)
       }]"
       :subtitle="getRouteInfo(personalizedRoutes[2])"
-      title="3. Theme-Based Route"
+      title="3. Combined Genre + Trope."
     />
 
     <div class="turn-the-page">
