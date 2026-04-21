@@ -27,7 +27,9 @@
 
 <script lang="ts" setup>
   import { ref } from 'vue'
+  import { useModal } from '@/composables/useModal'
 
+  const { show } = useModal()
   const selected = ref('')
 
   const options = [
@@ -43,9 +45,9 @@
 
   function submitVote () {
     if (!selected.value) {
-      alert('Please select an option first.')
+      show('Please select an option first.', 'No option selected', 'warning')
     } else {
-      alert(`Voted for: ${selected.value}`)
+      show(`Your vote for "${selected.value}" has been submitted!`, 'Vote submitted', 'success')
     }
   }
 </script>

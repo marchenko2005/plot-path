@@ -35,6 +35,15 @@
                 />
               </BaseFormGroup>
 
+              <v-alert
+                v-if="error"
+                class="mb-3"
+                density="compact"
+                :text="error"
+                type="error"
+                variant="tonal"
+              />
+
               <v-btn
                 block
                 class="login-button"
@@ -69,45 +78,29 @@
   import BaseFormGroup from '@/components/Base/BaseFormGroup.vue';
   import { ref } from 'vue';
   import { useRouter } from 'vue-router';
+  import { useAuthStore } from '@/store/auth';
 
   const router = useRouter();
+  const authStore = useAuthStore();
+
   const email = ref('');
   const password = ref('');
   const image = '/images/auth.webp';
   const loading = ref(false);
+  const error = ref('');
 
   const submit = async () => {
     loading.value = true;
+    error.value = '';
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.value, password: password.value }),
-      });
-
-      if (!res.ok) throw new Error('Invalid login');
-
-      const { accessToken, refreshToken } = await res.json();
-      const resUser = await fetch(`${import.meta.env.VITE_API_URL}/user/profile`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const userText = await resUser.text();
-      const userProfile = JSON.parse(userText);
-      const actualUser = userProfile.user;
-
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('user', JSON.stringify({ email: email.value, AvatarUrl: actualUser.AvatarUrl, username: actualUser.Username }));
-
-      router.push({ path: '/routes' });
-    } catch (error) {
-      console.error('[Login] Login failed:', error);
-      alert('Login failed. Check your credentials.');
+      await authStore.login(email.value, password.value);
+      router.push('/routes');
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Login failed. Check your credentials.';
     } finally {
       loading.value = false;
     }
   };
-
 </script>
 
 

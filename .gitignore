@@ -165,6 +165,8 @@ dist
 #
 # Recommended template: Node.gitignore
 
+CLAUDE.md
+
 # TODO: where does this rule come from?
 docs/_book
 
