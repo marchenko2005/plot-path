@@ -12,7 +12,7 @@ const userController = {
 
       const userResult = await pool.request()
         .input('UserId', sql.UniqueIdentifier, userId)
-        .query('SELECT Id, Username, Email, AvatarUrl FROM Users WHERE Id = @UserId');
+        .query('SELECT Id, Username, Email, AvatarUrl, Age FROM Users WHERE Id = @UserId');
       if (userResult.recordset.length === 0) return res.status(404).json({ error: 'User not found' });
 
       const tagResult = await pool.request()
@@ -44,7 +44,92 @@ const userController = {
     }
   },
 
-   async leaveReview(req, res) {
+  async getPublicProfile(req, res) {
+    const { userId } = req.params;
+    try {
+      const pool = await sql.connect(config);
+
+      const userResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query('SELECT Id, Username, AvatarUrl, Age FROM Users WHERE Id = @UserId');
+
+      if (userResult.recordset.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const badgesResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT b.Name, b.Description, b.ImageUrl
+          FROM UserBadges ub
+          JOIN Badges b ON ub.BadgeId = b.Id
+          WHERE ub.UserId = @UserId
+        `);
+
+      const tagsResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT t.Id, t.Name, t.Type
+          FROM UserTagPreferences up
+          JOIN Tags t ON up.TagId = t.Id
+          WHERE up.UserId = @UserId
+        `);
+
+      const routesResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT r.Id, r.Name, ur.Status
+          FROM UserRoutes ur
+          JOIN Routes r ON ur.RouteId = r.Id
+          WHERE ur.UserId = @UserId AND ur.Status = 'in_progress'
+        `);
+
+      res.json({
+        user: userResult.recordset[0],
+        badges: badgesResult.recordset,
+        tags: tagsResult.recordset,
+        activeRoutes: routesResult.recordset,
+      });
+    } catch (error) {
+      console.error('Error fetching public profile:', error);
+      res.status(500).json({ error: 'Failed to fetch user profile' });
+    }
+  },
+
+  async updateProfile(req, res) {
+    const userId = req.user.userId;
+    const { username, age } = req.body;    
+
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'Username is required.' });
+    }
+
+    try {
+      const pool = await sql.connect(config);
+
+      const duplicate = await pool.request()
+        .input('Username', sql.NVarChar, username.trim())
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query('SELECT Id FROM Users WHERE Username = @Username AND Id != @UserId');
+
+      if (duplicate.recordset.length > 0) {
+        return res.status(409).json({ error: 'Username is already taken.' });
+      }
+
+      await pool.request()
+        .input('Username', sql.NVarChar, username.trim())
+        .input('Age', sql.Int, age ? parseInt(age) : null)
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query('UPDATE Users SET Username = @Username, Age = @Age WHERE Id = @UserId');
+
+      res.json({ message: 'Profile updated.' });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      res.status(500).json({ error: 'Failed to update profile.' });
+    }
+  },
+
+  async leaveReview(req, res) {
       const { routeId, bookId } = req.params;
       const { rating, reviewText } = req.body;
 
