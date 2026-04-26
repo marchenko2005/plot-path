@@ -1,11 +1,5 @@
 import { defineStore } from 'pinia';
 import { apiFetch } from '@/plugins/api';
-import { useUserStore } from '@/store/user';
-
-interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-}
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -22,16 +16,22 @@ export const useAuthStore = defineStore('auth', {
       const res = await apiFetch('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
-      }) as AuthResponse;
+      }) as { accessToken: string; refreshToken: string };
 
-      console.log('[AuthStore] Login response:', res);
       this.setTokens(res.accessToken, res.refreshToken);
+
+      const profile = await apiFetch('/user/profile') as { user: { Username: string; AvatarUrl: string | null } };
+      localStorage.setItem('user', JSON.stringify({
+        email,
+        username: profile.user.Username,
+        AvatarUrl: profile.user.AvatarUrl,
+      }));
     },
 
-    async register (name: string, email: string, password: string) {
+    async register (name: string, email: string, password: string, tagIds: string[]) {
       await apiFetch('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, tagIds }),
       });
     },
 
@@ -52,9 +52,7 @@ export const useAuthStore = defineStore('auth', {
       this.refreshToken = '';
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-
-      const userStore = useUserStore();
-      userStore.profile = null;
+      localStorage.removeItem('user');
     },
 
     setTokens (accessToken: string, refreshToken: string) {

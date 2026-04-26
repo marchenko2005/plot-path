@@ -4,6 +4,7 @@
       <router-view />
     </v-main>
     <AwardModal />
+    <AppModal />
   </v-app>
 </template>
 

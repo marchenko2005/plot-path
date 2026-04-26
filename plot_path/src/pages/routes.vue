@@ -85,7 +85,8 @@
     <Footer />
   </div>
 </template><script setup lang="ts">
-  import { ref, onMounted } from 'vue';
+  import { onMounted, ref } from 'vue';
+  import { useModal } from '@/composables/useModal';
   import Header from '@/components/Header.vue';
   import Footer from '@/components/Footer.vue';
   import RouteOfTheMonth from '@/components/RouteOfTheMonth.vue';
@@ -100,6 +101,7 @@
   }
 
   const profile = ref<any>(null);
+  const { show } = useModal();
   const personalizedRoutes = ref<Route[]>([]);
   const monthlyRoute = ref<Route | null>(null);
 
@@ -199,10 +201,10 @@
 
       console.log('[Route] Route started:', data.message);
       // Можна оновити інтерфейс, перенаправити користувача або показати сповіщення
-      alert('Route started successfully!');
+      show('Your route has been started!', 'Route started', 'success');
     } catch (err) {
       console.error('[Route] Error starting route:', err);
-      alert('Failed to start route');
+      show('Something went wrong. Please try again.', 'Failed to start route', 'error');
     }
   };
 

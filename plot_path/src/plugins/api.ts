@@ -10,13 +10,6 @@ export async function apiFetch (path: string, options: RequestInit = {}) {
     ...(options.headers || {}),
   };
 
-  if (token) {
-    console.log('[apiFetch] Using token:', token);
-    console.log('[apiFetch] Authorization header:', headers.Authorization);
-  } else {
-    console.warn('[apiFetch] No token in localStorage');
-  }
-
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
@@ -24,7 +17,6 @@ export async function apiFetch (path: string, options: RequestInit = {}) {
 
   const contentType = response.headers.get('Content-Type');
   const rawText = await response.clone().text();
-  console.log('[apiFetch] Raw response text:', rawText);
 
   let data: Record<string, any> | null = null;
 
