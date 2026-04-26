@@ -22,14 +22,14 @@
                   :src="profile.user.AvatarUrl
                     ? `http://localhost:3001${profile.user.AvatarUrl}`
                     : 'http://localhost:3001/uploads/avatars/default_ava.jpg'"
-                />
+                >
               </v-avatar>
 
               <div class="username">{{ profile.user.Username }}</div>
 
               <div class="actions">
                 <v-btn class="action-btn" rounded variant="outlined">Add friend</v-btn>
-                <v-btn class="action-btn action-btn--filled" rounded variant="flat">Message</v-btn>
+                <v-btn class="action-btn action-btn--filled" rounded variant="flat" @click="router.push(`/chat?with=${profile.user.Id}`)">Message</v-btn>
               </div>
 
               <div v-if="profile.tags.length" class="info-row">
@@ -42,7 +42,7 @@
                 <div v-if="bookClubs.length === 0" class="info-empty">No book clubs yet</div>
                 <div v-for="club in bookClubs" :key="club.id" class="club-row">
                   <v-avatar size="36">
-                    <img :alt="club.name" :src="club.imageUrl ?? '/images/default_avatar.png'" />
+                    <img :alt="club.name" :src="club.imageUrl ?? '/images/default_avatar.png'">
                   </v-avatar>
                   <span>{{ club.name }}</span>
                 </div>
@@ -52,7 +52,7 @@
 
           <!-- Right: friends + awards -->
           <v-col cols="12" md="8">
-            <ProfileFriends :friends="friends" class="mb-4" />
+            <ProfileFriends class="mb-4" :friends="friends" />
             <ProfileAwards :awards="awards" />
           </v-col>
         </v-row>
@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
   import { computed, onMounted, ref } from 'vue';
-  import { useRoute } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
   import { apiFetch } from '@/plugins/api';
   import ProfileAwards from '@/components/Profile/ProfileAwards.vue';
   import type { DisplayBadge } from '@/components/Profile/ProfileAwards.vue';
@@ -92,6 +92,7 @@
   }
 
   const route = useRoute();
+  const router = useRouter();
   const profile = ref<PublicProfile | null>(null);
   const loading = ref(true);
   const error = ref('');

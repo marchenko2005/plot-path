@@ -18,6 +18,7 @@
           <UserAvatarMenu
             v-if="accessToken && user"
             :user="user"
+            :unread-messages="unreadMessages"
             @logout="handleLogout"
           />
 
@@ -38,6 +39,7 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
+  import { apiFetch } from '@/plugins/api';
 
   const { showImage, links } = defineProps<{
     showImage?: boolean;
@@ -49,7 +51,6 @@
   // Token
   const accessToken = localStorage.getItem('accessToken') || '';
 
-  // User
   const user = ref<{
     id: string;
     username: string;
@@ -57,12 +58,20 @@
     AvatarUrl: string | null;
   } | null>(null);
 
-  onMounted(() => {
+  const unreadMessages = ref(0);
+
+  onMounted(async () => {
     const stored = localStorage.getItem('user');
     if (stored) {
       user.value = JSON.parse(stored);
-    } else {
-      console.log('[Header] No user found in localStorage');
+    }
+    if (accessToken) {
+      try {
+        const chats = await apiFetch('/chat') as { UnreadCount: number }[];
+        unreadMessages.value = chats.reduce((sum, c) => sum + (c.UnreadCount || 0), 0);
+      } catch {
+        // not critical
+      }
     }
   });
 

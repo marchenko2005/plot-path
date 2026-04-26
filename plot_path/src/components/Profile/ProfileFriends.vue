@@ -6,7 +6,7 @@
       <div v-else class="friends-list">
         <div v-for="friend in friends" :key="friend.id" class="friend-item">
           <v-avatar size="52">
-            <img :alt="friend.name" :src="friend.avatarUrl ?? '/images/default_avatar.png'" />
+            <img :alt="friend.name" :src="friend.avatarUrl ?? '/images/default_avatar.png'">
           </v-avatar>
           <span class="friend-name">{{ friend.name }}</span>
         </div>
