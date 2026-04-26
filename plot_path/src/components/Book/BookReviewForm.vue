@@ -2,7 +2,7 @@
   <div class="rate-section text-center">
     <h3>What do you think?</h3>
     <v-avatar class="my-4" size="64">
-      <img alt="User avatar" :src="avatarSrc" />
+      <img alt="User avatar" :src="avatarSrc">
     </v-avatar>
 
     <v-rating v-model="userRating" color="amber" half-increments size="32" />
@@ -12,7 +12,13 @@
       <v-btn class="mt-2" color="brown" variant="flat" @click="submit">Save</v-btn>
       <v-textarea v-model="reviewText" auto-grow class="mt-4" variant="solo" />
     </template>
-    <v-btn v-else class="mt-2" color="brown" variant="flat" @click="showReviewText = true">
+    <v-btn
+      v-else
+      class="mt-2"
+      color="brown"
+      variant="flat"
+      @click="showReviewText = true"
+    >
       Write a review
     </v-btn>
   </div>

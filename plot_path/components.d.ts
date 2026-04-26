@@ -21,6 +21,7 @@ declare module 'vue' {
     Header: typeof import('./src/components/Header.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     LibraryGallery: typeof import('./src/components/LibraryGallery.vue')['default']
+    NotificationBell: typeof import('./src/components/NotificationBell.vue')['default']
     ProfileAwards: typeof import('./src/components/Profile/ProfileAwards.vue')['default']
     ProfileFriends: typeof import('./src/components/Profile/ProfileFriends.vue')['default']
     ProfileInterests: typeof import('./src/components/Profile/ProfileInterests.vue')['default']

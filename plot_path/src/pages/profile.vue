@@ -54,7 +54,7 @@
             <div v-if="bookClubs.length === 0" class="meta-empty">No book clubs yet</div>
             <div v-for="club in bookClubs" :key="club.id" class="meta-row">
               <v-avatar size="32">
-                <img :alt="club.name" :src="club.imageUrl ?? '/images/default_avatar.png'">
+                <img :alt="club.name" :src="club.imageUrl ?? '/uploads/avatars/default_ava.jpg'">
               </v-avatar>
               <span class="meta-club-name">{{ club.name }}</span>
             </div>
@@ -250,11 +250,25 @@
     }
   };
 
+  const fetchFriends = async () => {
+    try {
+      const data = await apiFetch('/friends') as { Id: string; Username: string; AvatarUrl: string | null }[];
+      friends.value = data.map(f => ({
+        id: f.Id,
+        name: f.Username,
+        avatarUrl: f.AvatarUrl ? `http://localhost:3001${f.AvatarUrl}` : null,
+      }));
+    } catch (err) {
+      console.error('[profile.vue] Failed to fetch friends:', err);
+    }
+  };
+
   onMounted(async () => {
     await fetchProfile();
     await fetchAllTags();
     await fetchUserTags();
     await fetchBadges();
+    await fetchFriends();
   });
 </script>
 
