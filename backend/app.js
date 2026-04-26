@@ -7,6 +7,11 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { initSocket } = require('./socket');
 
+// Cron jobs
+require('./controllers/dailyRouteGenerator');
+require('./controllers/monthlyRouteGenerator');
+require('./controllers/clubBookChecker');
+
 dotenv.config();
 
 const app = express();
@@ -41,7 +46,8 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/vote', require('./routes/vote'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/friends', require('./routes/friends'));
-app.use('/api/clubs',   require('./routes/clubs'));
+app.use('/api/clubs',         require('./routes/clubs'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // ❌ 404
 app.use((req, res) => {

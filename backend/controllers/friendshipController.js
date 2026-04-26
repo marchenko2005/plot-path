@@ -1,6 +1,7 @@
 const sql = require('mssql');
 const config = require('../db/sqlConfig');
 const friendshipModel = require('../models/friendship');
+const notificationModel = require('../models/notification');
 const { emitToUser } = require('../socket');
 
 async function getUserSnippet(pool, userId) {
@@ -30,10 +31,9 @@ module.exports = {
       const pool = await sql.connect(config);
       const sender = await getUserSnippet(pool, senderId);
 
-      emitToUser(receiverId, 'notification:friend_request', {
-        requestId,
-        sender: { id: senderId, ...sender },
-      });
+      const payload = { requestId, sender: { id: senderId, ...sender } };
+      await notificationModel.create(receiverId, 'friend_request', payload);
+      emitToUser(receiverId, 'notification:friend_request', payload);
 
       res.status(201).json({ message: 'Friend request sent', requestId });
     } catch (err) {
@@ -73,9 +73,9 @@ module.exports = {
       const pool = await sql.connect(config);
       const acceptor = await getUserSnippet(pool, userId);
 
-      emitToUser(request.SenderId, 'notification:friend_accepted', {
-        friend: { id: userId, ...acceptor },
-      });
+      const payload = { friend: { id: userId, ...acceptor } };
+      await notificationModel.create(request.SenderId, 'friend_accepted', payload);
+      emitToUser(request.SenderId, 'notification:friend_accepted', payload);
 
       res.json({ message: 'Friend request accepted' });
     } catch (err) {
