@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue';
+  import { computed, onMounted, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { apiFetch } from '@/plugins/api';
   import ProfileAwards from '@/components/Profile/ProfileAwards.vue';
@@ -181,9 +181,14 @@
     }
   };
 
-  onMounted(async () => {
+  async function loadProfile (id: string) {
+    loading.value = true;
+    error.value = '';
+    profile.value = null;
+    routeBooks.value = [];
+    friends.value = [];
     try {
-      profile.value = await apiFetch(`/user/${route.params.id}/public`) as PublicProfile;
+      profile.value = await apiFetch(`/user/${id}/public`) as PublicProfile;
       friendshipStatus.value = profile.value.friendshipStatus ?? 'none';
       friendRequestId.value = profile.value.friendRequestId ?? null;
       friends.value = profile.value.friends.map(f => ({
@@ -199,7 +204,10 @@
     } finally {
       loading.value = false;
     }
-  });
+  }
+
+  onMounted(() => loadProfile(route.params.id as string));
+  watch(() => route.params.id, id => { if (id) loadProfile(id as string); });
 </script>
 
 <style scoped lang="scss">
