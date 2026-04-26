@@ -1,6 +1,37 @@
+const sql = require('mssql');
+const config = require('../db/sqlConfig');
 const notificationModel = require('../models/notification');
 
 module.exports = {
+  // GET /api/notifications/summary
+  async getSummary(req, res) {
+    try {
+      const pool = await sql.connect(config);
+      const result = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, req.user.userId)
+        .query(`
+          SELECT
+            (SELECT COUNT(*) FROM FriendRequests
+             WHERE ReceiverId = @UserId AND Status = 'pending')                          AS FriendRequests,
+            (SELECT COUNT(*) FROM PrivateMessages pm
+             JOIN PrivateChats pc ON pc.Id = pm.ChatId
+             WHERE (pc.UserId1 = @UserId OR pc.UserId2 = @UserId)
+               AND pm.SenderId != @UserId AND pm.IsRead = 0)                             AS UnreadMessages,
+            (SELECT COUNT(*) FROM Notifications
+             WHERE UserId = @UserId AND IsRead = 0)                                      AS UnreadNotifications
+        `);
+      const row = result.recordset[0];
+      res.json({
+        friendRequests:       row.FriendRequests,
+        unreadMessages:       row.UnreadMessages,
+        unreadNotifications:  row.UnreadNotifications,
+      });
+    } catch (err) {
+      console.error('[Notifications] getSummary error:', err);
+      res.status(500).json({ error: 'Failed to load summary' });
+    }
+  },
+
   // GET /api/notifications
   async getNotifications(req, res) {
     try {

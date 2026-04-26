@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate } = require('../middleware/authMiddleware');
 const ctrl = require('../controllers/notificationController');
 
+router.get('/summary',       authenticate, ctrl.getSummary);
 router.get('/',              authenticate, ctrl.getNotifications);
 router.get('/unread-count',  authenticate, ctrl.getUnreadCount);
 router.put('/read-all',      authenticate, ctrl.markAllAsRead);
