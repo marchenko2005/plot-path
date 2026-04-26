@@ -87,6 +87,15 @@
 
             </BaseFormGroup>
 
+            <v-alert
+              v-if="errors.server"
+              class="mt-2"
+              density="compact"
+              :text="errors.server"
+              type="error"
+              variant="tonal"
+            />
+
             <v-btn block class="create-btn mt-6" size="large" type="submit">
               Create Account
             </v-btn>
@@ -99,28 +108,39 @@
 </template>
 
 <script lang="ts" setup>
-  import { reactive, ref } from 'vue';
+  import { onMounted, reactive, ref } from 'vue';
+  import { useRouter } from 'vue-router';
+  import { useAuthStore } from '@/store/auth';
+  import { apiFetch } from '@/plugins/api';
 
-  const API = 'http://localhost:3000/api';
-  const interests = ref<{ Id: string; Name: string }[]>([]); // усі доступні теги
+  const router = useRouter();
+  const authStore = useAuthStore();
+
+  const interests = ref<{ Id: string; Name: string }[]>([]);
   const form = reactive({
     fullName: '',
     email: '',
     password: '',
     passwordRepeat: '',
-    interests: [] as string[], // Масив лише ID
+    interests: [] as string[],
   });
 
   const showPass = ref(false);
-  const errors = reactive<{ fullName?: string }>({});
-  const formRef = ref();
+  const errors = reactive<{ fullName?: string; server?: string }>({});
 
-  // Пошук тегів за частиною назви
+  onMounted(async () => {
+    try {
+      const data = await apiFetch('/tags') as { Id: string; Name: string }[];
+      interests.value = data;
+    } catch (err) {
+      console.error('[SignUp] Failed to load tags:', err);
+    }
+  });
+
   const searchTags = async (query: string) => {
     if (!query || query.length < 2) return;
     try {
-      const res = await fetch(`${API}/tags/search/by-name?name=${encodeURIComponent(query)}`);
-      const data = await res.json();
+      const data = await apiFetch(`/tags/search/by-name?name=${encodeURIComponent(query)}`) as { Id: string; Name: string }[];
       const existing = new Set(interests.value.map(tag => tag.Id));
       for (const tag of data) {
         if (!existing.has(tag.Id)) interests.value.push(tag);
@@ -130,34 +150,19 @@
     }
   };
 
-  // Відправка реєстрації
   const submitForm = async () => {
     errors.fullName = form.fullName.trim() === '' ? 'Full name is required' : '';
+    errors.server = '';
     if (errors.fullName) return;
 
-    const tagIds = form.interests.filter(id => !!id); // вже ID
-    console.log('[SignUp] Selected interests:', form.interests);
-    console.log('[SignUp] Final tagIds:', tagIds);
+    const tagIds = form.interests.filter(Boolean);
 
     try {
-      const res = await fetch(`${API}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.fullName,
-          email: form.email,
-          password: form.password,
-          tagIds,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Registration failed');
-
-      console.log('[SignUp] User registered:', data);
-      // Optionally redirect to login
+      await authStore.register(form.fullName, form.email, form.password, tagIds);
+      router.push('/auth/login');
     } catch (err) {
       console.error('[SignUp] Registration error:', err);
+      errors.server = err instanceof Error ? err.message : 'Registration failed. Please try again.';
     }
   };
 

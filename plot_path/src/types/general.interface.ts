@@ -14,5 +14,5 @@ export interface Review {
   CreatedAt: string;
   UserId: string;
   UserName: string;
-  UserAvatar: string;
+  UserAvatar: string | null;
 }
