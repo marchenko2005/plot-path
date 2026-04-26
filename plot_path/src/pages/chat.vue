@@ -51,9 +51,7 @@
         <v-btn color="white" icon variant="text">
           <v-icon>mdi-square-edit-outline</v-icon>
         </v-btn>
-        <v-btn color="white" icon variant="text">
-          <v-icon>mdi-bell-outline</v-icon>
-        </v-btn>
+        <NotificationBell />
         <UserAvatarMenu v-if="menuUser" :unread-messages="totalUnread" :user="menuUser" @logout="handleLogout" />
       </v-toolbar>
 

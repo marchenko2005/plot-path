@@ -46,6 +46,7 @@ const userController = {
 
   async getPublicProfile(req, res) {
     const { userId } = req.params;
+    const viewerId = req.user.userId;
     try {
       const pool = await sql.connect(config);
 
@@ -85,11 +86,53 @@ const userController = {
           WHERE ur.UserId = @UserId AND ur.Status = 'in_progress'
         `);
 
+      const friendshipResult = await pool.request()
+        .input('A', sql.UniqueIdentifier, viewerId)
+        .input('B', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT
+            CASE
+              WHEN EXISTS (
+                SELECT 1 FROM Friendships
+                WHERE (UserId1 = @A AND UserId2 = @B) OR (UserId1 = @B AND UserId2 = @A)
+              ) THEN 'friends'
+              WHEN EXISTS (
+                SELECT 1 FROM FriendRequests
+                WHERE SenderId = @A AND ReceiverId = @B AND Status = 'pending'
+              ) THEN 'request_sent'
+              WHEN EXISTS (
+                SELECT 1 FROM FriendRequests
+                WHERE SenderId = @B AND ReceiverId = @A AND Status = 'pending'
+              ) THEN 'request_received'
+              ELSE 'none'
+            END AS FriendshipStatus,
+            (
+              SELECT TOP 1 Id FROM FriendRequests
+              WHERE ((SenderId = @A AND ReceiverId = @B) OR (SenderId = @B AND ReceiverId = @A))
+                AND Status = 'pending'
+            ) AS RequestId
+        `);
+
+      const { FriendshipStatus, RequestId } = friendshipResult.recordset[0];
+
+      const friendsResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT u.Id, u.Username, u.AvatarUrl
+          FROM Friendships f
+          JOIN Users u ON u.Id = CASE WHEN f.UserId1 = @UserId THEN f.UserId2 ELSE f.UserId1 END
+          WHERE f.UserId1 = @UserId OR f.UserId2 = @UserId
+          ORDER BY f.CreatedAt DESC
+        `);
+
       res.json({
         user: userResult.recordset[0],
         badges: badgesResult.recordset,
         tags: tagsResult.recordset,
         activeRoutes: activeRoutesResult.recordset,
+        friendshipStatus: FriendshipStatus,
+        friendRequestId: RequestId ?? null,
+        friends: friendsResult.recordset,
       });
     } catch (error) {
       console.error('Error fetching public profile:', error);

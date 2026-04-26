@@ -4,12 +4,12 @@
     <div class="friends-box">
       <div v-if="friends.length === 0" class="friends-empty">No friends added yet</div>
       <div v-else class="friends-list">
-        <div v-for="friend in friends" :key="friend.id" class="friend-item">
+        <router-link v-for="friend in friends" :key="friend.id" class="friend-item" :to="`/users/${friend.id}`">
           <v-avatar size="52">
-            <img :alt="friend.name" :src="friend.avatarUrl ?? '/images/default_avatar.png'">
+            <img :alt="friend.name" :src="friend.avatarUrl ?? '/uploads/avatars/default_ava.jpg'">
           </v-avatar>
           <span class="friend-name">{{ friend.name }}</span>
-        </div>
+        </router-link>
         <span class="see-more">See more...</span>
       </div>
     </div>
@@ -58,6 +58,12 @@
       flex-direction: column;
       align-items: center;
       gap: 6px;
+      text-decoration: none;
+      cursor: pointer;
+
+      &:hover .friend-name {
+        text-decoration: underline;
+      }
 
       .friend-name {
         font-size: 0.75rem;

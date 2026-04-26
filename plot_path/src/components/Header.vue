@@ -15,12 +15,14 @@
         </v-col>
 
         <v-col class="d-flex justify-end align-center">
-          <UserAvatarMenu
-            v-if="accessToken && user"
-            :user="user"
-            :unread-messages="unreadMessages"
-            @logout="handleLogout"
-          />
+          <template v-if="accessToken && user">
+            <NotificationBell />
+            <UserAvatarMenu
+              :user="user"
+              :unread-messages="unreadMessages"
+              @logout="handleLogout"
+            />
+          </template>
 
           <div v-else class="header-buttons">
             <v-btn class="header-button" to="/auth/signup">Sign Up</v-btn>
