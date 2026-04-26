@@ -167,6 +167,9 @@ CLAUDE.md
 #
 # Recommended template: Node.gitignore
 
+CLAUDE.md
+.claude/
+
 # TODO: where does this rule come from?
 docs/_book
 

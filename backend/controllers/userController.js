@@ -12,7 +12,7 @@ const userController = {
 
       const userResult = await pool.request()
         .input('UserId', sql.UniqueIdentifier, userId)
-        .query('SELECT Id, Username, Email, AvatarUrl FROM Users WHERE Id = @UserId');
+        .query('SELECT Id, Username, Email, AvatarUrl, Age FROM Users WHERE Id = @UserId');
       if (userResult.recordset.length === 0) return res.status(404).json({ error: 'User not found' });
 
       const tagResult = await pool.request()
@@ -44,7 +44,139 @@ const userController = {
     }
   },
 
-   async leaveReview(req, res) {
+  async getPublicProfile(req, res) {
+    const { userId } = req.params;
+    const viewerId = req.user.userId;
+    try {
+      const pool = await sql.connect(config);
+
+      const userResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query('SELECT Id, Username, AvatarUrl, Age FROM Users WHERE Id = @UserId');
+
+      if (userResult.recordset.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const badgesResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT b.Id, b.Name, b.Description, b.IconUrl, b.ImageUrl, ub.AwardedAt
+          FROM UserBadges ub
+          JOIN Badges b ON ub.BadgeId = b.Id
+          WHERE ub.UserId = @UserId
+          ORDER BY ub.AwardedAt DESC
+        `);
+
+      const tagsResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT t.Id, t.Name, t.Type
+          FROM UserTagPreferences up
+          JOIN Tags t ON up.TagId = t.Id
+          WHERE up.UserId = @UserId
+        `);
+
+      // Друзі профілю (перші 3 + загальна кількість)
+      const friendsResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT TOP 3 u.Id, u.Username, u.AvatarUrl
+          FROM Friendships f
+          JOIN Users u ON u.Id = CASE WHEN f.UserId1 = @UserId THEN f.UserId2 ELSE f.UserId1 END
+          WHERE f.UserId1 = @UserId OR f.UserId2 = @UserId
+        `);
+
+      const friendsCountResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT COUNT(*) AS Total
+          FROM Friendships
+          WHERE UserId1 = @UserId OR UserId2 = @UserId
+        `);
+
+      // Статус дружби відносно viewer-а
+      const friendshipResult = await pool.request()
+        .input('A', sql.UniqueIdentifier, viewerId)
+        .input('B', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT
+            CASE
+              WHEN EXISTS (
+                SELECT 1 FROM Friendships
+                WHERE (UserId1 = @A AND UserId2 = @B) OR (UserId1 = @B AND UserId2 = @A)
+              ) THEN 'friends'
+              WHEN EXISTS (
+                SELECT 1 FROM FriendRequests
+                WHERE SenderId = @A AND ReceiverId = @B AND Status = 'pending'
+              ) THEN 'request_sent'
+              WHEN EXISTS (
+                SELECT 1 FROM FriendRequests
+                WHERE SenderId = @B AND ReceiverId = @A AND Status = 'pending'
+              ) THEN 'request_received'
+              ELSE 'none'
+            END AS FriendshipStatus
+        `);
+
+      // Клуби до яких належить юзер
+      const clubsResult = await pool.request()
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT c.Id, c.Name, c.AvatarUrl
+          FROM ClubMembers cm
+          JOIN Clubs c ON c.Id = cm.ClubId
+          WHERE cm.UserId = @UserId AND c.IsActive = 1
+        `);
+
+      res.json({
+        user: userResult.recordset[0],
+        badges: badgesResult.recordset,
+        tags: tagsResult.recordset,
+        friends: friendsResult.recordset,
+        friendsTotal: friendsCountResult.recordset[0].Total,
+        friendshipStatus: friendshipResult.recordset[0].FriendshipStatus,
+        clubs: clubsResult.recordset,
+      });
+    } catch (error) {
+      console.error('Error fetching public profile:', error);
+      res.status(500).json({ error: 'Failed to fetch user profile' });
+    }
+  },
+
+  async updateProfile(req, res) {
+    const userId = req.user.userId;
+    const { username, age } = req.body;    
+
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'Username is required.' });
+    }
+
+    try {
+      const pool = await sql.connect(config);
+
+      const duplicate = await pool.request()
+        .input('Username', sql.NVarChar, username.trim())
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query('SELECT Id FROM Users WHERE Username = @Username AND Id != @UserId');
+
+      if (duplicate.recordset.length > 0) {
+        return res.status(409).json({ error: 'Username is already taken.' });
+      }
+
+      await pool.request()
+        .input('Username', sql.NVarChar, username.trim())
+        .input('Age', sql.Int, age ? parseInt(age) : null)
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .query('UPDATE Users SET Username = @Username, Age = @Age WHERE Id = @UserId');
+
+      res.json({ message: 'Profile updated.' });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      res.status(500).json({ error: 'Failed to update profile.' });
+    }
+  },
+
+  async leaveReview(req, res) {
       const { routeId, bookId } = req.params;
       const { rating, reviewText } = req.body;
 

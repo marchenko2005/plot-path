@@ -31,6 +31,14 @@ module.exports = {
         return res.status(409).json({ error: 'Email is already registered.' });
       }
 
+      const usernameCheck = await pool.request()
+        .input('Name', sql.NVarChar, name)
+        .query('SELECT Id FROM Users WHERE Username = @Name');
+
+      if (usernameCheck.recordset.length > 0) {
+        return res.status(409).json({ error: 'Username is already taken.' });
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Додавання користувача до бд

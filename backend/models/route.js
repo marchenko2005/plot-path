@@ -67,7 +67,7 @@ const route = {
                     SELECT r.*
                     FROM UserRoutes ur
                     JOIN Routes r ON ur.RouteId = r.Id
-                    WHERE ur.UserId = @UserId AND ur.Status = 'сompleted'
+                    WHERE ur.UserId = @UserId AND ur.Status = 'completed'
                 `);
             return result.recordset;
         } catch (error) {
