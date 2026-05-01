@@ -40,7 +40,7 @@
             <div class="d-flex" style="gap: 6px;">
               <v-btn
                 :loading="pending === req.Id"
-                color="primary"
+                color="success"
                 density="comfortable"
                 icon
                 variant="tonal"

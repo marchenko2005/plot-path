@@ -62,7 +62,12 @@ module.exports = {
         return res.status(403).json({ error: 'This club is private' });
       }
 
-      res.json({ ...data, viewerRole: role });
+      let myRating = null;
+      if (data.currentBook) {
+        myRating = await clubModel.getUserRating(data.currentBook.ClubBookId, req.user.userId);
+      }
+
+      res.json({ ...data, viewerRole: role, myRating });
     } catch (err) {
       console.error('[Club] getClub error:', err);
       res.status(500).json({ error: 'Failed to load club' });
@@ -120,6 +125,22 @@ module.exports = {
     } catch (err) {
       console.error('[Club] setMemberRole error:', err);
       res.status(500).json({ error: 'Failed to update role' });
+    }
+  },
+
+  // PUT /api/clubs/:clubId
+  async updateClub(req, res) {
+    const { clubId } = req.params;
+    const { name, description, avatarUrl, isPublic, tagIds } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: 'Club name is required' });
+    try {
+      const role = await clubModel.getMemberRole(clubId, req.user.userId);
+      if (!requireAdmin(role)) return res.status(403).json({ error: 'Admin only' });
+      await clubModel.update(clubId, { name: name.trim(), description, avatarUrl, isPublic, tagIds });
+      res.json({ message: 'Club updated' });
+    } catch (err) {
+      console.error('[Club] updateClub error:', err);
+      res.status(500).json({ error: 'Failed to update club' });
     }
   },
 

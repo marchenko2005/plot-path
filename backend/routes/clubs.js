@@ -7,6 +7,7 @@ router.post('/',                              authenticate, ctrl.createClub);
 router.get('/search',                         authenticate, ctrl.searchClubs);
 router.get('/my',                             authenticate, ctrl.getMyClubs);
 router.get('/:clubId',                        authenticate, ctrl.getClub);
+router.put('/:clubId',                        authenticate, ctrl.updateClub);
 router.post('/join/:inviteCode',              authenticate, ctrl.joinByCode);
 router.delete('/:clubId/leave',              authenticate, ctrl.leaveClub);
 router.put('/:clubId/members/:userId/role',  authenticate, ctrl.setMemberRole);
