@@ -1,3 +1,18 @@
+export interface MyClub {
+  Id: string
+  Name: string
+  AvatarUrl: string | null
+  IsPublic: boolean
+  Role: string
+  MemberCount: number
+}
+export interface PublicClub {
+  Id: string
+  Name: string
+  Description: string | null
+  AvatarUrl: string | null
+  MemberCount: number
+}
 export interface Tag { Id: string; Name: string; Type: string }
 export interface Member { Id: string; Username: string; AvatarUrl: string | null; Role: string }
 export interface CurrentBook {
