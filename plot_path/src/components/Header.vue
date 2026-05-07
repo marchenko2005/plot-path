@@ -7,6 +7,9 @@
             <li v-for="link in links" :key="link.label">
               <a :href="link.path">{{ link.label }}</a>
             </li>
+            <li v-if="accessToken && user">
+              <router-link to="/clubs">Book Clubs</router-link>
+            </li>
           </ul>
         </v-col>
 
@@ -42,6 +45,7 @@
   import { onMounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
   import { apiFetch } from '@/plugins/api';
+  import { disconnectSocket } from '@/plugins/socket';
 
   const { showImage, links } = defineProps<{
     showImage?: boolean;
@@ -78,6 +82,7 @@
   });
 
   function handleLogout () {
+    disconnectSocket();
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');

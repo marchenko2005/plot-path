@@ -29,8 +29,9 @@ const club = {
       .input('ClubId', sql.UniqueIdentifier, id)
       .input('UserId', sql.UniqueIdentifier, creatorId)
       .query(`
-        INSERT INTO ClubMembers (ClubId, UserId, Role, JoinedAt)
-        VALUES (@ClubId, @UserId, 'admin', GETDATE())
+        IF NOT EXISTS (SELECT 1 FROM ClubMembers WHERE ClubId = @ClubId AND UserId = @UserId)
+          INSERT INTO ClubMembers (ClubId, UserId, Role, JoinedAt)
+          VALUES (@ClubId, @UserId, 'admin', GETDATE())
       `);
 
     for (const tagId of (tagIds || [])) {
@@ -280,19 +281,7 @@ const club = {
           VALUES (@Id, @ClubId, @ClubBookId, @UserId, @Rating, GETDATE());
       `);
 
-    const [memberCount, ratingCount] = await Promise.all([
-      pool.request()
-        .input('ClubId', sql.UniqueIdentifier, clubId)
-        .query('SELECT COUNT(*) AS Cnt FROM ClubMembers WHERE ClubId = @ClubId'),
-      pool.request()
-        .input('ClubBookId', sql.UniqueIdentifier, clubBookId)
-        .query('SELECT COUNT(*) AS Cnt FROM ClubRatings WHERE ClubBookId = @ClubBookId'),
-    ]);
-
-    const allRated = ratingCount.recordset[0].Cnt >= memberCount.recordset[0].Cnt;
-    if (allRated) await this.completeCurrentBook(clubId);
-
-    return { allRated };
+    return {};
   },
 
   async getUserRating(clubBookId, userId) {
@@ -371,6 +360,28 @@ const club = {
       .input('UserId', sql.UniqueIdentifier, userId)
       .query('SELECT ClubId FROM ClubMembers WHERE UserId = @UserId');
     return result.recordset.map(r => r.ClubId);
+  },
+
+  async update(clubId, { name, description, avatarUrl, isPublic, tagIds }) {
+    const pool = await sql.connect(config);
+    await pool.request()
+      .input('Id',          sql.UniqueIdentifier, clubId)
+      .input('Name',        sql.NVarChar(150),    name.trim())
+      .input('Description', sql.NVarChar(1000),   description || null)
+      .input('AvatarUrl',   sql.NVarChar(500),    avatarUrl || null)
+      .input('IsPublic',    sql.Bit,              isPublic ? 1 : 0)
+      .query('UPDATE Clubs SET Name=@Name, Description=@Description, AvatarUrl=@AvatarUrl, IsPublic=@IsPublic WHERE Id=@Id AND IsActive=1');
+
+    await pool.request()
+      .input('ClubId', sql.UniqueIdentifier, clubId)
+      .query('DELETE FROM ClubTags WHERE ClubId=@ClubId');
+
+    for (const tagId of (tagIds || [])) {
+      await pool.request()
+        .input('ClubId', sql.UniqueIdentifier, clubId)
+        .input('TagId',  sql.UniqueIdentifier, tagId)
+        .query('INSERT INTO ClubTags (ClubId, TagId) VALUES (@ClubId, @TagId)');
+    }
   },
 
   // ─── Recommendations (Content-Based Filtering: tags 70% + authors 30%) ──────
