@@ -30,7 +30,7 @@ export async function apiFetch (path: string, options: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    const message = data?.message || `API error ${response.status}`;
+    const message = data?.error || data?.message || `API error ${response.status}`;
     console.error('[apiFetch] Request failed:', message);
     throw new Error(message);
   }

@@ -124,4 +124,16 @@ module.exports = {
       res.status(500).json({ error: 'Failed to load friends' });
     }
   },
+
+  // GET /api/friends/suggestions
+  async getFriendSuggestions(req, res) {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+      const suggestions = await friendshipModel.getSuggestions(req.user.userId, limit);
+      res.json(suggestions);
+    } catch (err) {
+      console.error('[Friends] getFriendSuggestions error:', err);
+      res.status(500).json({ error: 'Failed to load suggestions' });
+    }
+  },
 };

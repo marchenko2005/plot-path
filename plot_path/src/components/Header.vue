@@ -14,7 +14,13 @@
           <img alt="logo" class="logo" src="/images/icons/logo.svg" @click="user ? router.push('/routes') : router.push('/')">
         </v-col>
 
-        <v-col class="d-flex justify-end align-center">
+        <v-col class="d-flex justify-end align-center" style="gap: 12px;">
+          <div class="lang-toggle">
+            <button :class="{ active: locale === 'uk' }" @click="setLocale('uk')">UA</button>
+            <span class="divider">|</span>
+            <button :class="{ active: locale === 'en' }" @click="setLocale('en')">EN</button>
+          </div>
+
           <UserAvatarMenu
             v-if="accessToken && user"
             :user="user"
@@ -22,8 +28,8 @@
           />
 
           <div v-else class="header-buttons">
-            <v-btn class="header-button" to="/auth/signup">Sign Up</v-btn>
-            <v-btn class="header-button log-in" to="/auth/login">Log In</v-btn>
+            <v-btn class="header-button" to="/auth/signup">{{ t('header.signUp') }}</v-btn>
+            <v-btn class="header-button log-in" to="/auth/login">{{ t('header.logIn') }}</v-btn>
           </div>
         </v-col>
       </v-row>
@@ -36,44 +42,44 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
-  import { useRouter } from 'vue-router';
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
-  const { showImage, links } = defineProps<{
-    showImage?: boolean;
-    links?: { label: string; path: string }[];
-  }>();
+const { showImage, links } = defineProps<{
+  showImage?: boolean;
+  links?: { label: string; path: string }[];
+}>();
 
-  const router = useRouter();
+const router = useRouter();
+const { t, locale } = useI18n();
 
-  // Token
-  const accessToken = localStorage.getItem('accessToken') || '';
+const accessToken = localStorage.getItem('accessToken') || '';
 
-  // User
-  const user = ref<{
-    id: string;
-    username: string;
-    email: string;
-    AvatarUrl: string | null;
-  } | null>(null);
+const user = ref<{
+  id: string;
+  username: string;
+  email: string;
+  AvatarUrl: string | null;
+} | null>(null);
 
-  onMounted(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      user.value = JSON.parse(stored);
-    } else {
-      console.log('[Header] No user found in localStorage');
-    }
-  });
+onMounted(() => {
+  const stored = localStorage.getItem('user');
+  if (stored) user.value = JSON.parse(stored);
+});
 
-  function handleLogout () {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    user.value = null;
-    router.push({ path: '/' });
-    console.log('[Header] Logged out and redirected');
-  }
+function setLocale(lang: 'en' | 'uk') {
+  locale.value = lang;
+  localStorage.setItem('locale', lang);
+}
+
+function handleLogout() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  user.value = null;
+  router.push({ path: '/' });
+}
 </script>
 
 <style scoped lang="scss">
@@ -118,6 +124,38 @@
       background-color: rgb(var(--v-theme-yellow));
       color: rgb(var(--v-theme-white));
     }
+  }
+}
+
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: rgb(var(--v-theme-primary));
+
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgb(var(--v-theme-primary));
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+
+    &.active {
+      opacity: 1;
+      font-weight: 700;
+    }
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .divider {
+    opacity: 0.4;
   }
 }
 </style>
