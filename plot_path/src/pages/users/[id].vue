@@ -163,7 +163,7 @@
     (profile.value?.badges ?? []).map(b => ({
       Name: b.Name,
       Description: b.Description,
-      ImageUrl: b.ImageUrl ? `http://localhost:3001${b.ImageUrl}` : '/images/default_badge.png',
+      ImageUrl: b.ImageUrl ? `${b.ImageUrl}` : '/images/default_badge.png',
     }))
   );
 
@@ -173,7 +173,7 @@
       routeBooks.value = data.books.map((book: any) => ({
         ...book,
         CoverUrl: book.CoverUrl?.startsWith('/uploads')
-          ? `http://localhost:3001${book.CoverUrl}`
+          ? `${import.meta.env.VITE_BASE_URL}${book.CoverUrl}`
           : book.CoverUrl,
       }));
     } catch {

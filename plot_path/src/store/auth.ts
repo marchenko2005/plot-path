@@ -22,8 +22,9 @@ export const useAuthStore = defineStore('auth', {
       this.setTokens(res.accessToken, res.refreshToken);
       connectSocket(res.accessToken);
 
-      const profile = await apiFetch('/user/profile') as { user: { Username: string; AvatarUrl: string | null } };
+      const profile = await apiFetch('/user/profile') as { user: { Id: string; Username: string; AvatarUrl: string | null } };
       localStorage.setItem('user', JSON.stringify({
+        Id: profile.user.Id,
         email,
         username: profile.user.Username,
         AvatarUrl: profile.user.AvatarUrl,

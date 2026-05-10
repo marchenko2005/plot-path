@@ -12,6 +12,7 @@
     <template v-if="showReviewText">
       <v-btn class="mt-2" color="brown" variant="flat" @click="submit">Save</v-btn>
       <v-textarea v-model="reviewText" auto-grow class="mt-4" variant="solo" />
+      <p v-if="reviewTextError" class="rate-error">Review must be at least 3 characters.</p>
     </template>
     <v-btn
       v-else
@@ -40,6 +41,7 @@
   const reviewText = ref('');
   const showReviewText = ref(false);
   const ratingError = ref(false);
+  const reviewTextError = ref(false);
 
   const avatarSrc = computed(() =>
     props.avatarUrl || 'http://localhost:3001/uploads/avatars/default_ava.jpg'
@@ -54,6 +56,13 @@
       return;
     }
     ratingError.value = false;
+
+    if (showReviewText.value && reviewText.value.length < 3) {
+      reviewTextError.value = true;
+      return;
+    }
+    reviewTextError.value = false;
+
     try {
       const response = await fetch(`${API}/user/routes/${props.routeId}/book/${props.bookId}/review`, {
         method: 'POST',

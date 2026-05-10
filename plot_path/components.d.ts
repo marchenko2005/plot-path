@@ -27,6 +27,7 @@ declare module 'vue' {
     ClubJoinByCode: typeof import('./src/components/Club/ClubJoinByCode.vue')['default']
     ClubMyList: typeof import('./src/components/Club/ClubMyList.vue')['default']
     ClubRecommendations: typeof import('./src/components/Club/ClubRecommendations.vue')['default']
+    ClubsToolbar: typeof import('./src/components/Club/ClubsToolbar.vue')['default']
     Footer: typeof import('./src/components/Footer.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']

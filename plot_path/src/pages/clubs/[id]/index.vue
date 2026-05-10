@@ -1,16 +1,6 @@
 <template>
   <div class="club-page">
-    <v-toolbar color="secondary" flat height="56">
-      <router-link class="d-flex align-center text-decoration-none ml-4 mr-2" to="/">
-        <v-icon color="white" size="22">mdi-book-open-variant</v-icon>
-      </router-link>
-      <router-link class="text-white font-weight-bold text-body-1 text-decoration-none mr-1" to="/">PlotPath</router-link>
-      <span class="text-white text-body-1 mr-1">·</span>
-      <router-link class="text-white font-weight-bold text-body-1 text-decoration-none" to="/clubs">Book Clubs</router-link>
-      <v-spacer />
-      <NotificationBell />
-      <UserAvatarMenu v-if="menuUser" :user="menuUser" @logout="handleLogout" />
-    </v-toolbar>
+    <ClubsToolbar breadcrumb />
 
     <template v-if="club">
       <ClubHeader
@@ -73,8 +63,6 @@
   import ClubDiscussion from '@/components/Club/ClubDiscussion.vue';
   import ClubBookPickerDialog from '@/components/Club/ClubBookPickerDialog.vue';
 
-  interface StoredUser { username: string; email: string; AvatarUrl: string | null }
-
   const route = useRoute();
   const router = useRouter();
   const clubId = route.params.id as string;
@@ -85,14 +73,6 @@
   const recommendations = ref<Book[]>([]);
   const myId = ref('');
   const myRating = ref(0);
-
-  const currentUser = ref<StoredUser | null>(null);
-  const menuUser = computed(() => currentUser.value && myId.value ? {
-    id: myId.value,
-    username: currentUser.value.username,
-    email: currentUser.value.email,
-    AvatarUrl: currentUser.value.AvatarUrl,
-  } : null);
 
   const isAdmin = computed(() => club.value?.viewerRole === 'admin');
 
@@ -111,13 +91,6 @@
     if (now >= end) return 100;
     return Math.round((now - start) / (end - start) * 100);
   });
-
-  function handleLogout () {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    router.push('/');
-  }
 
   function copyInviteLink () {
     if (!club.value) return;
@@ -199,8 +172,6 @@
   });
 
   onMounted(async () => {
-    const stored = localStorage.getItem('user');
-    if (stored) currentUser.value = JSON.parse(stored);
     const token = localStorage.getItem('accessToken');
     if (token) connectSocket(token);
 
