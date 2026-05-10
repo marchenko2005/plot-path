@@ -15,20 +15,29 @@ const bookController = {
         }
     },
 
-    // Fetch a single book by ID
+    // Fetch a single book by ID (includes authors from Authors table)
     async getBookById(req, res) {
         const { id } = req.params;
         try {
             const pool = await sql.connect(config);
-            const result = await pool.request()
+            const bookResult = await pool.request()
                 .input('Id', sql.UniqueIdentifier, id)
                 .query('SELECT * FROM Books WHERE Id = @Id');
 
-            if (result.recordset.length === 0) {
+            if (bookResult.recordset.length === 0) {
                 return res.status(404).json({ error: 'Book not found' });
             }
 
-            res.json(result.recordset[0]);
+            const authorsResult = await pool.request()
+                .input('BookId', sql.UniqueIdentifier, id)
+                .query(`
+                    SELECT a.Id, a.Name, a.ImageUrl
+                    FROM BookAuthors ba
+                    JOIN Authors a ON a.Id = ba.AuthorId
+                    WHERE ba.BookId = @BookId
+                `);
+
+            res.json({ ...bookResult.recordset[0], authors: authorsResult.recordset });
         } catch (error) {
             console.error('Error fetching book by ID:', error);
             res.status(500).json({ error: 'Failed to fetch book' });

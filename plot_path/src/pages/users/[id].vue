@@ -22,14 +22,21 @@
                   :src="profile.user.AvatarUrl
                     ? `http://localhost:3001${profile.user.AvatarUrl}`
                     : 'http://localhost:3001/uploads/avatars/default_ava.jpg'"
-                />
+                >
               </v-avatar>
 
               <div class="username">{{ profile.user.Username }}</div>
 
               <div class="actions">
-                <v-btn class="action-btn" rounded variant="outlined">Add friend</v-btn>
-                <v-btn class="action-btn action-btn--filled" rounded variant="flat">Message</v-btn>
+                <v-btn
+                  class="action-btn"
+                  :disabled="friendshipStatus === 'friends' || friendshipLoading"
+                  :loading="friendshipLoading"
+                  rounded
+                  variant="outlined"
+                  @click="handleFriendAction"
+                >{{ friendBtnLabel }}</v-btn>
+                <v-btn class="action-btn action-btn--filled" rounded variant="flat" @click="router.push(`/chat?with=${profile.user.Id}`)">Message</v-btn>
               </div>
 
               <div v-if="profile.tags.length" class="info-row">
@@ -42,7 +49,7 @@
                 <div v-if="bookClubs.length === 0" class="info-empty">No book clubs yet</div>
                 <div v-for="club in bookClubs" :key="club.id" class="club-row">
                   <v-avatar size="36">
-                    <img :alt="club.name" :src="club.imageUrl ?? '/images/default_avatar.png'" />
+                    <img :alt="club.name" :src="club.imageUrl ?? '/uploads/avatars/default_ava.jpg'">
                   </v-avatar>
                   <span>{{ club.name }}</span>
                 </div>
@@ -52,7 +59,7 @@
 
           <!-- Right: friends + awards -->
           <v-col cols="12" md="8">
-            <ProfileFriends :friends="friends" class="mb-4" />
+            <ProfileFriends class="mb-4" :friends="friends" />
             <ProfileAwards :awards="awards" />
           </v-col>
         </v-row>
@@ -70,11 +77,21 @@
       <Footer />
     </template>
   </div>
+
+  <v-snackbar
+    color="error"
+    location="bottom"
+    :model-value="!!friendshipError"
+    timeout="4000"
+    @update:model-value="val => { if (!val) friendshipError = '' }"
+  >
+    {{ friendshipError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue';
-  import { useRoute } from 'vue-router';
+  import { computed, onMounted, ref, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { apiFetch } from '@/plugins/api';
   import ProfileAwards from '@/components/Profile/ProfileAwards.vue';
   import type { DisplayBadge } from '@/components/Profile/ProfileAwards.vue';
@@ -84,20 +101,61 @@
 
   interface BookClub { id: string; name: string; imageUrl: string | null }
 
+  type FriendshipStatus = 'none' | 'friends' | 'request_sent' | 'request_received';
+
   interface PublicProfile {
     user: { Id: string; Username: string; AvatarUrl: string | null; Age: number | null };
     badges: { Name: string; Description: string; ImageUrl: string | null }[];
     tags: { Id: string; Name: string; Type: string }[];
     activeRoutes: { Id: string; Name: string }[];
+    friendshipStatus: FriendshipStatus;
+    friendRequestId: string | null;
+    friends: { Id: string; Username: string; AvatarUrl: string | null }[];
   }
 
   const route = useRoute();
+  const router = useRouter();
   const profile = ref<PublicProfile | null>(null);
   const loading = ref(true);
   const error = ref('');
   const routeBooks = ref<Book[]>([]);
+  const friendshipStatus = ref<FriendshipStatus>('none');
+  const friendRequestId = ref<string | null>(null);
+  const friendshipLoading = ref(false);
+  const friendshipError = ref('');
 
-  // No API yet — empty placeholders
+  const friendBtnLabel = computed(() => {
+    if (friendshipStatus.value === 'friends') return 'Friends';
+    if (friendshipStatus.value === 'request_sent') return 'Cancel Request';
+    if (friendshipStatus.value === 'request_received') return 'Accept Request';
+    return 'Add Friend';
+  });
+
+  async function handleFriendAction () {
+    if (!profile.value) return;
+    friendshipLoading.value = true;
+    friendshipError.value = '';
+    try {
+      const targetId = profile.value.user.Id;
+      if (friendshipStatus.value === 'none') {
+        const res = await apiFetch(`/friends/request/${targetId}`, { method: 'POST' }) as { requestId: string };
+        friendRequestId.value = res.requestId;
+        friendshipStatus.value = 'request_sent';
+      } else if (friendshipStatus.value === 'request_sent') {
+        await apiFetch(`/friends/request/${targetId}`, { method: 'DELETE' });
+        friendRequestId.value = null;
+        friendshipStatus.value = 'none';
+      } else if (friendshipStatus.value === 'request_received' && friendRequestId.value) {
+        await apiFetch(`/friends/request/${friendRequestId.value}/accept`, { method: 'PUT' });
+        friendshipStatus.value = 'friends';
+      }
+    } catch (err: any) {
+      friendshipError.value = err?.message || 'Something went wrong';
+    } finally {
+      friendshipLoading.value = false;
+    }
+  }
+
   const friends = ref<Friend[]>([]);
   const bookClubs = ref<BookClub[]>([]);
 
@@ -123,9 +181,21 @@
     }
   };
 
-  onMounted(async () => {
+  async function loadProfile (id: string) {
+    loading.value = true;
+    error.value = '';
+    profile.value = null;
+    routeBooks.value = [];
+    friends.value = [];
     try {
-      profile.value = await apiFetch(`/user/${route.params.id}/public`) as PublicProfile;
+      profile.value = await apiFetch(`/user/${id}/public`) as PublicProfile;
+      friendshipStatus.value = profile.value.friendshipStatus ?? 'none';
+      friendRequestId.value = profile.value.friendRequestId ?? null;
+      friends.value = profile.value.friends.map(f => ({
+        id: f.Id,
+        name: f.Username,
+        avatarUrl: f.AvatarUrl ? `http://localhost:3001${f.AvatarUrl}` : null,
+      }));
       if (profile.value.activeRoutes[0]) {
         await fetchRouteBooks(profile.value.activeRoutes[0].Id);
       }
@@ -134,7 +204,10 @@
     } finally {
       loading.value = false;
     }
-  });
+  }
+
+  onMounted(() => loadProfile(route.params.id as string));
+  watch(() => route.params.id, id => { if (id) loadProfile(id as string); });
 </script>
 
 <style scoped lang="scss">

@@ -1,9 +1,16 @@
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const path = require('path');
+const { initSocket } = require('./socket');
+
+// Cron jobs
+require('./controllers/dailyRouteGenerator');
+require('./controllers/monthlyRouteGenerator');
+require('./controllers/clubBookChecker');
 
 dotenv.config();
 
@@ -24,6 +31,7 @@ app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'http://localhost:3001');
   res.header('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, express.static(path.join(__dirname, 'uploads')));
 
@@ -37,6 +45,10 @@ app.use('/api/tags', require('./routes/tag'));
 app.use('/api/badges', require('./routes/badges'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/vote', require('./routes/vote'));
+app.use('/api/chat', require('./routes/chat'));
+app.use('/api/friends', require('./routes/friends'));
+app.use('/api/clubs',         require('./routes/clubs'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // ❌ 404
 app.use((req, res) => {
@@ -51,6 +63,8 @@ app.use((err, req, res, next) => {
 
 // 🚀 Старт
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = http.createServer(app);
+initSocket(server);
+server.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
 });

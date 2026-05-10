@@ -8,12 +8,18 @@
           :src="review.UserAvatar
             ? `http://localhost:3001${review.UserAvatar}`
             : 'http://localhost:3001/uploads/avatars/default_ava.jpg'"
-        />
+        >
       </v-avatar>
       <div>
         <div class="review-header">
           <strong class="clickable" @click="router.push(`/users/${review.UserId}`)">{{ review.UserName }}</strong>
-          <v-rating color="amber" dense half-increments :model-value="review.Rating" readonly />
+          <v-rating
+            color="amber"
+            dense
+            half-increments
+            :model-value="review.Rating"
+            readonly
+          />
         </div>
         <p>{{ showFull[review.Id] ? review.ReviewText : truncate(review.ReviewText, 180) }}</p>
         <a class="show-toggle" @click="toggle(review.Id)">

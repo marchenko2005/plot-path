@@ -17,14 +17,23 @@
         </div>
 
         <div v-if="books.length > 1" class="progress-bar">
+          <div class="progress-fill" :style="{ width: `${fillPercent}%`, backgroundColor: accentColor }" />
           <div
-            v-for="(book, index) in books"
+            v-for="(_, index) in books"
             :key="'dot-' + index"
             class="progress-dot"
-            :style="{ left: `${(index / (books.length - 1)) * 100}%`, backgroundColor: buttons ? buttons[0].color : '#d98b9c' }"
+            :class="{
+              'dot-completed': index < currentBookIndex,
+              'dot-active': index === currentBookIndex,
+              'dot-empty': index > currentBookIndex,
+            }"
+            :style="{
+              left: `${(index / (books.length - 1)) * 100}%`,
+              backgroundColor: index <= currentBookIndex ? accentColor : 'white',
+              borderColor: accentColor,
+            }"
           />
         </div>
-        <span v-if="books[0]?.progressPercent">{{ books[0]?.progressPercent }}%</span>
       </v-sheet>
       <div class="actions">
         <v-btn
@@ -44,7 +53,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { defineProps } from 'vue';
+  import { computed } from 'vue';
   import type { Book } from '@/types/general.interface';
   import { useRouter } from 'vue-router';
 
@@ -56,6 +65,7 @@
       query: { routeId },
     });
   }
+
   interface Button {
     label: string;
     color: string;
@@ -63,7 +73,7 @@
     action: () => void;
   }
 
-  defineProps<{
+  const props = defineProps<{
     title?: string;
     subtitle?: string;
     books: Book[];
@@ -71,6 +81,21 @@
     backgroundColorBooks?: string;
     buttons?: Button[];
   }>();
+
+  const accentColor = computed(() => props.buttons?.[0]?.color ?? '#d98b9c');
+
+  const currentBookIndex = computed(() => {
+    const p = props.books[0]?.progressPercent ?? 0;
+    const n = props.books.length;
+    if (!p || !n) return -1;
+    return Math.min(Math.ceil(p * n / 100) - 1, n - 1);
+  });
+
+  const fillPercent = computed(() => {
+    const n = props.books.length;
+    if (n < 2 || currentBookIndex.value < 0) return 0;
+    return (currentBookIndex.value / (n - 1)) * 100;
+  });
 </script>
 
 <style lang="scss" scoped>
@@ -123,14 +148,39 @@
     background-color: white;
     border-radius: 2px;
 
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
     .progress-dot {
       position: absolute;
       top: 50%;
       transform: translate(-50%, -50%);
-      width: 10px;
-      height: 10px;
-      background-color: #d98b9c;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
+      border: 2px solid;
+      box-sizing: border-box;
+
+      &.dot-completed {
+        width: 12px;
+        height: 12px;
+      }
+
+      &.dot-active {
+        width: 14px;
+        height: 14px;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+      }
+
+      &.dot-empty {
+        background-color: white !important;
+      }
     }
   }
 
