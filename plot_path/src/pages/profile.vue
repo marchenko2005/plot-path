@@ -16,30 +16,30 @@
           </div>
 
           <div class="field-group">
-            <label class="field-label">Username</label>
+            <label class="field-label">{{ t('profile.username') }}</label>
             <v-text-field
               v-model="form.name"
               density="compact"
               hide-details
-              placeholder="Your Username"
+              :placeholder="t('profile.usernamePlaceholder')"
               variant="outlined"
             />
           </div>
 
           <div class="field-group">
-            <label class="field-label">Age</label>
+            <label class="field-label">{{ t('profile.age') }}</label>
             <v-text-field
               v-model="form.age"
               density="compact"
               hide-details
-              placeholder="Your age"
+              :placeholder="t('profile.agePlaceholder')"
               type="number"
               variant="outlined"
             />
           </div>
 
           <div class="meta-section">
-            <div class="meta-title">My email Address</div>
+            <div class="meta-title">{{ t('profile.myEmail') }}</div>
             <div class="meta-row">
               <v-icon size="20">mdi-email-outline</v-icon>
               <div>
@@ -50,8 +50,8 @@
           </div>
 
           <div class="meta-section">
-            <div class="meta-title">My Book Clubs</div>
-            <div v-if="bookClubs.length === 0" class="meta-empty">No book clubs yet</div>
+            <div class="meta-title">{{ t('profile.myBookClubs') }}</div>
+            <div v-if="bookClubs.length === 0" class="meta-empty">{{ t('profile.noClubs') }}</div>
             <div v-for="club in bookClubs" :key="club.id" class="meta-row">
               <v-avatar size="32">
                 <img :alt="club.name" :src="club.imageUrl ?? '/uploads/avatars/default_ava.jpg'">
@@ -67,7 +67,7 @@
         <v-col class="main-content" cols="12" md="7">
           <div class="d-flex mb-6">
             <v-spacer />
-            <v-btn class="save-btn" variant="elevated" @click="saveProfile">Save</v-btn>
+            <v-btn class="save-btn" variant="elevated" @click="saveProfile">{{ t('profile.save') }}</v-btn>
           </div>
 
           <div class="mb-6">
@@ -93,7 +93,7 @@
         background-color-books="#6F6F64"
         :books="books2"
         :subtitle="routes[0]?.Name"
-        title="Current routes"
+        :title="t('profile.currentRoutes')"
       />
 
       <RouteOfTheMonth
@@ -116,7 +116,10 @@
 
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import type { Route, Tag, User } from '@/types/user.interface';
+
+  const { t } = useI18n();
   import type { Book } from '@/types/general.interface';
   import { apiFetch } from '@/plugins/api';
   import ProfileInterests from '@/components/Profile/ProfileInterests.vue';
