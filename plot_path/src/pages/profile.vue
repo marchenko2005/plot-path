@@ -197,7 +197,7 @@
     return data.books.map((book: any) => ({
       ...book,
       CoverUrl: book.CoverUrl?.startsWith('/uploads')
-        ? `http://localhost:3001${book.CoverUrl}`
+        ? `${import.meta.env.VITE_BASE_URL}${book.CoverUrl}`
         : book.CoverUrl,
       progressPercent: data.progressPercent || null,
     }));

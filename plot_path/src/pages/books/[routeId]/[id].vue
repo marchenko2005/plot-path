@@ -40,6 +40,11 @@
   const book = ref<any>(null);
   const reviews = ref<Review[]>([]);
 
+  const normalizeCoverUrl = (url: string | null): string => {
+    if (!url) return '';
+    return `${import.meta.env.VITE_BASE_URL}${url}`
+  };
+
   const loadBook = async () => {
     try {
       const res = await fetch(`${API}/books/${bookId}`, { headers });
@@ -49,9 +54,7 @@
         Title: data.Title,
         Author: data.Author,
         Description: data.Description || '',
-        CoverUrl: data.CoverUrl?.startsWith('/uploads')
-          ? `http://localhost:3001${data.CoverUrl}`
-          : data.CoverUrl,
+        CoverUrl: normalizeCoverUrl(data.CoverUrl),
         Rating: data.AverageRating || 0,
         RatingCount: data.RatingCount || 0,
         ReviewCount: data.ReviewCount || 0,

@@ -7,6 +7,7 @@
 
     <v-rating v-model="userRating" color="amber" half-increments size="32" />
     <p class="rate-label">Rate this book</p>
+    <p v-if="ratingError" class="rate-error">Please select a rating before submitting.</p>
 
     <template v-if="showReviewText">
       <v-btn class="mt-2" color="brown" variant="flat" @click="submit">Save</v-btn>
@@ -38,6 +39,7 @@
   const userRating = ref(0);
   const reviewText = ref('');
   const showReviewText = ref(false);
+  const ratingError = ref(false);
 
   const avatarSrc = computed(() =>
     props.avatarUrl || 'http://localhost:3001/uploads/avatars/default_ava.jpg'
@@ -47,6 +49,11 @@
   const token = localStorage.getItem('accessToken') || '';
 
   async function submit () {
+    if (!userRating.value) {
+      ratingError.value = true;
+      return;
+    }
+    ratingError.value = false;
     try {
       const response = await fetch(`${API}/user/routes/${props.routeId}/book/${props.bookId}/review`, {
         method: 'POST',
@@ -78,6 +85,12 @@
     font-size: 0.9rem;
     color: #555;
     margin-top: 6px;
+  }
+
+  .rate-error {
+    font-size: 0.85rem;
+    color: #c62828;
+    margin-top: 4px;
   }
 }
 </style>
