@@ -44,6 +44,7 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n';
   import { apiFetch } from '@/plugins/api';
   import { disconnectSocket } from '@/plugins/socket';
 

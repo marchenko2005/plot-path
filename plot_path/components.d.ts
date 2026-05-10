@@ -8,7 +8,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AboutAs: typeof import('./src/components/AboutAs.vue')['default']
     AboutUs: typeof import('./src/components/AboutUs.vue')['default']
     AppModal: typeof import('./src/components/AppModal.vue')['default']
     AwardModal: typeof import('./src/components/AwardModal.vue')['default']
@@ -29,7 +28,6 @@ declare module 'vue' {
     ClubRecommendations: typeof import('./src/components/Club/ClubRecommendations.vue')['default']
     Footer: typeof import('./src/components/Footer.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
-    HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     LibraryGallery: typeof import('./src/components/LibraryGallery.vue')['default']
     NotificationBell: typeof import('./src/components/NotificationBell.vue')['default']
     ProfileAwards: typeof import('./src/components/Profile/ProfileAwards.vue')['default']
