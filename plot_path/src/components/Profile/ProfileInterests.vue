@@ -16,13 +16,13 @@
     </div>
     <v-autocomplete
       v-if="showSearch"
-      :model-value="modelValue"
       class="mt-2"
       density="compact"
       hide-details
       item-title="Name"
       item-value="Id"
       :items="allTags"
+      :model-value="modelValue"
       multiple
       placeholder="Search here..."
       return-object

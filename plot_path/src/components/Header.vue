@@ -7,6 +7,9 @@
             <li v-for="link in links" :key="link.label">
               <a :href="link.path">{{ link.label }}</a>
             </li>
+            <li v-if="accessToken && user">
+              <router-link to="/clubs">Book Clubs</router-link>
+            </li>
           </ul>
         </v-col>
 
@@ -14,18 +17,15 @@
           <img alt="logo" class="logo" src="/images/icons/logo.svg" @click="user ? router.push('/routes') : router.push('/')">
         </v-col>
 
-        <v-col class="d-flex justify-end align-center" style="gap: 12px;">
-          <div class="lang-toggle">
-            <button :class="{ active: locale === 'uk' }" @click="setLocale('uk')">UA</button>
-            <span class="divider">|</span>
-            <button :class="{ active: locale === 'en' }" @click="setLocale('en')">EN</button>
-          </div>
-
-          <UserAvatarMenu
-            v-if="accessToken && user"
-            :user="user"
-            @logout="handleLogout"
-          />
+        <v-col class="d-flex justify-end align-center">
+          <template v-if="accessToken && user">
+            <NotificationBell />
+            <UserAvatarMenu
+              :user="user"
+              :unread-messages="unreadMessages"
+              @logout="handleLogout"
+            />
+          </template>
 
           <div v-else class="header-buttons">
             <v-btn class="header-button" to="/auth/signup">{{ t('header.signUp') }}</v-btn>
@@ -42,9 +42,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+  import { onMounted, ref } from 'vue';
+  import { useRouter } from 'vue-router';
+  import { apiFetch } from '@/plugins/api';
+  import { disconnectSocket } from '@/plugins/socket';
 
 const { showImage, links } = defineProps<{
   showImage?: boolean;
@@ -56,30 +57,39 @@ const { t, locale } = useI18n();
 
 const accessToken = localStorage.getItem('accessToken') || '';
 
-const user = ref<{
-  id: string;
-  username: string;
-  email: string;
-  AvatarUrl: string | null;
-} | null>(null);
+  const user = ref<{
+    id: string;
+    username: string;
+    email: string;
+    AvatarUrl: string | null;
+  } | null>(null);
 
-onMounted(() => {
-  const stored = localStorage.getItem('user');
-  if (stored) user.value = JSON.parse(stored);
-});
+  const unreadMessages = ref(0);
 
-function setLocale(lang: 'en' | 'uk') {
-  locale.value = lang;
-  localStorage.setItem('locale', lang);
-}
+  onMounted(async () => {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      user.value = JSON.parse(stored);
+    }
+    if (accessToken) {
+      try {
+        const chats = await apiFetch('/chat') as { UnreadCount: number }[];
+        unreadMessages.value = chats.reduce((sum, c) => sum + (c.UnreadCount || 0), 0);
+      } catch {
+        // not critical
+      }
+    }
+  });
 
-function handleLogout() {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('user');
-  user.value = null;
-  router.push({ path: '/' });
-}
+  function handleLogout () {
+    disconnectSocket();
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    user.value = null;
+    router.push({ path: '/' });
+    console.log('[Header] Logged out and redirected');
+  }
 </script>
 
 <style scoped lang="scss">

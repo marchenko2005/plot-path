@@ -32,7 +32,9 @@ module.exports = {
       const sender = await getUserSnippet(pool, senderId);
 
       const payload = { requestId, sender: { id: senderId, ...sender } };
-      await notificationModel.create(receiverId, 'friend_request', payload);
+      notificationModel.create(receiverId, 'friend_request', payload).catch(err =>
+        console.error('[Friends] notification persist error:', err.message)
+      );
       emitToUser(receiverId, 'notification:friend_request', payload);
 
       res.status(201).json({ message: 'Friend request sent', requestId });
@@ -74,7 +76,9 @@ module.exports = {
       const acceptor = await getUserSnippet(pool, userId);
 
       const payload = { friend: { id: userId, ...acceptor } };
-      await notificationModel.create(request.SenderId, 'friend_accepted', payload);
+      notificationModel.create(request.SenderId, 'friend_accepted', payload).catch(err =>
+        console.error('[Friends] notification persist error:', err.message)
+      );
       emitToUser(request.SenderId, 'notification:friend_accepted', payload);
 
       res.json({ message: 'Friend request accepted' });

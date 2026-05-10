@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiFetch } from '@/plugins/api';
+import { connectSocket, disconnectSocket } from '@/plugins/socket';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -19,6 +20,7 @@ export const useAuthStore = defineStore('auth', {
       }) as { accessToken: string; refreshToken: string };
 
       this.setTokens(res.accessToken, res.refreshToken);
+      connectSocket(res.accessToken);
 
       const profile = await apiFetch('/user/profile') as { user: { Username: string; AvatarUrl: string | null } };
       localStorage.setItem('user', JSON.stringify({
@@ -48,6 +50,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     logout () {
+      disconnectSocket();
       this.accessToken = '';
       this.refreshToken = '';
       localStorage.removeItem('accessToken');

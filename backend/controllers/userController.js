@@ -77,25 +77,15 @@ const userController = {
           WHERE up.UserId = @UserId
         `);
 
-      // Друзі профілю (перші 3 + загальна кількість)
-      const friendsResult = await pool.request()
+      const activeRoutesResult = await pool.request()
         .input('UserId', sql.UniqueIdentifier, userId)
         .query(`
-          SELECT TOP 3 u.Id, u.Username, u.AvatarUrl
-          FROM Friendships f
-          JOIN Users u ON u.Id = CASE WHEN f.UserId1 = @UserId THEN f.UserId2 ELSE f.UserId1 END
-          WHERE f.UserId1 = @UserId OR f.UserId2 = @UserId
+          SELECT TOP 1 r.Id, r.Name
+          FROM UserRoutes ur
+          JOIN Routes r ON ur.RouteId = r.Id
+          WHERE ur.UserId = @UserId AND ur.Status = 'in_progress'
         `);
 
-      const friendsCountResult = await pool.request()
-        .input('UserId', sql.UniqueIdentifier, userId)
-        .query(`
-          SELECT COUNT(*) AS Total
-          FROM Friendships
-          WHERE UserId1 = @UserId OR UserId2 = @UserId
-        `);
-
-      // Статус дружби відносно viewer-а
       const friendshipResult = await pool.request()
         .input('A', sql.UniqueIdentifier, viewerId)
         .input('B', sql.UniqueIdentifier, userId)
@@ -115,27 +105,34 @@ const userController = {
                 WHERE SenderId = @B AND ReceiverId = @A AND Status = 'pending'
               ) THEN 'request_received'
               ELSE 'none'
-            END AS FriendshipStatus
+            END AS FriendshipStatus,
+            (
+              SELECT TOP 1 Id FROM FriendRequests
+              WHERE ((SenderId = @A AND ReceiverId = @B) OR (SenderId = @B AND ReceiverId = @A))
+                AND Status = 'pending'
+            ) AS RequestId
         `);
 
-      // Клуби до яких належить юзер
-      const clubsResult = await pool.request()
+      const { FriendshipStatus, RequestId } = friendshipResult.recordset[0];
+
+      const friendsResult = await pool.request()
         .input('UserId', sql.UniqueIdentifier, userId)
         .query(`
-          SELECT c.Id, c.Name, c.AvatarUrl
-          FROM ClubMembers cm
-          JOIN Clubs c ON c.Id = cm.ClubId
-          WHERE cm.UserId = @UserId AND c.IsActive = 1
+          SELECT u.Id, u.Username, u.AvatarUrl
+          FROM Friendships f
+          JOIN Users u ON u.Id = CASE WHEN f.UserId1 = @UserId THEN f.UserId2 ELSE f.UserId1 END
+          WHERE f.UserId1 = @UserId OR f.UserId2 = @UserId
+          ORDER BY f.CreatedAt DESC
         `);
 
       res.json({
         user: userResult.recordset[0],
         badges: badgesResult.recordset,
         tags: tagsResult.recordset,
+        activeRoutes: activeRoutesResult.recordset,
+        friendshipStatus: FriendshipStatus,
+        friendRequestId: RequestId ?? null,
         friends: friendsResult.recordset,
-        friendsTotal: friendsCountResult.recordset[0].Total,
-        friendshipStatus: friendshipResult.recordset[0].FriendshipStatus,
-        clubs: clubsResult.recordset,
       });
     } catch (error) {
       console.error('Error fetching public profile:', error);
