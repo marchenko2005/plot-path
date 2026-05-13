@@ -3,35 +3,44 @@
     <ClubsToolbar breadcrumb />
 
     <template v-if="club">
-      <ClubHeader
+      <template v-if="isMember">
+        <ClubHeader
+          :club="club"
+          :is-admin="isAdmin"
+          @copy-invite="copyInviteLink"
+        />
+
+        <div class="club-content">
+          <div class="club-left d-flex flex-column ga-4">
+            <ClubBookOfMonth
+              v-model="myRating"
+              :current-book="club.currentBook"
+              :is-admin="isAdmin"
+              :is-member="isMember"
+              :reading-progress="readingProgress"
+              @choose-book="bookDialog = true"
+              @leave="leaveClub"
+              @rate="submitRating"
+            />
+            <ClubRecommendations :recommendations="recommendations" />
+          </div>
+
+          <div class="club-right">
+            <ClubDiscussion
+              :messages="messages"
+              :my-id="myId"
+              @send="sendMessage"
+            />
+          </div>
+        </div>
+      </template>
+
+      <ClubGuestView
+        v-else
         :club="club"
-        :is-admin="isAdmin"
-        @copy-invite="copyInviteLink"
-        @leave="leaveClub"
+        :joining="joiningClub"
+        @join="joinClub"
       />
-
-      <div class="club-content">
-        <div class="club-left d-flex flex-column ga-4">
-          <ClubBookOfMonth
-            v-model="myRating"
-            :current-book="club.currentBook"
-            :is-admin="isAdmin"
-            :reading-progress="readingProgress"
-            @choose-book="bookDialog = true"
-            @rate="submitRating"
-          />
-          <ClubRecommendations :recommendations="recommendations" />
-        </div>
-
-        <div class="club-right">
-          <ClubDiscussion
-            :is-admin="isAdmin"
-            :messages="messages"
-            :my-id="myId"
-            @send="sendMessage"
-          />
-        </div>
-      </div>
     </template>
 
     <div v-else-if="loading" class="d-flex justify-center align-center" style="height: 60vh;">
@@ -62,6 +71,7 @@
   import ClubRecommendations from '@/components/Club/ClubRecommendations.vue';
   import ClubDiscussion from '@/components/Club/ClubDiscussion.vue';
   import ClubBookPickerDialog from '@/components/Club/ClubBookPickerDialog.vue';
+  import ClubGuestView from '@/components/Club/ClubGuestView.vue';
 
   const route = useRoute();
   const router = useRouter();
@@ -75,10 +85,12 @@
   const myRating = ref(0);
 
   const isAdmin = computed(() => club.value?.viewerRole === 'admin');
+  const isMember = computed(() => club.value?.viewerRole !== null);
 
   const bookDialog = ref(false);
   const allBooks = ref<Book[]>([]);
   const settingBook = ref(false);
+  const joiningClub = ref(false);
   const snackbar = ref({ show: false, text: '', color: 'success' });
 
   const readingProgress = computed(() => {
@@ -142,6 +154,24 @@
     }
   }
 
+  async function joinClub () {
+    if (!club.value) return;
+    joiningClub.value = true;
+    try {
+      await apiFetch(`/clubs/join/${club.value.InviteCode}`, { method: 'POST' });
+      await loadClub();
+      getSocket()?.emit('club:join_room', { clubId });
+      messages.value = await apiFetch(`/clubs/${clubId}/messages`) as Message[];
+      recommendations.value = await apiFetch(`/clubs/${clubId}/recommendations`) as Book[];
+      snackbar.value = { show: true, text: 'You joined the club!', color: 'success' };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to join';
+      snackbar.value = { show: true, text: message, color: 'error' };
+    } finally {
+      joiningClub.value = false;
+    }
+  }
+
   async function leaveClub () {
     try {
       await apiFetch(`/clubs/${clubId}/leave`, { method: 'DELETE' });
@@ -189,16 +219,18 @@
     if (club.value) {
       getSocket()?.emit('club:join_room', { clubId });
 
-      try {
-        messages.value = await apiFetch(`/clubs/${clubId}/messages`) as Message[];
-      } catch (err) {
-        console.error('[club] messages error:', err);
-      }
+      if (isMember.value) {
+        try {
+          messages.value = await apiFetch(`/clubs/${clubId}/messages`) as Message[];
+        } catch (err) {
+          console.error('[club] messages error:', err);
+        }
 
-      try {
-        recommendations.value = await apiFetch(`/clubs/${clubId}/recommendations`) as Book[];
-      } catch (err) {
-        console.error('[club] recommendations error:', err);
+        try {
+          recommendations.value = await apiFetch(`/clubs/${clubId}/recommendations`) as Book[];
+        } catch (err) {
+          console.error('[club] recommendations error:', err);
+        }
       }
     }
 
@@ -228,6 +260,7 @@
   padding: 16px;
   background: #EDE8E0;
   max-width: 1200px;
+  min-height: 80vh;
   width: 100%;
   margin: 0 auto;
 }

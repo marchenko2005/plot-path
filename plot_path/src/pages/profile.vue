@@ -52,11 +52,26 @@
           <div class="meta-section">
             <div class="meta-title">My Book Clubs</div>
             <div v-if="bookClubs.length === 0" class="meta-empty">No book clubs yet</div>
-            <div v-for="club in bookClubs" :key="club.id" class="meta-row">
-              <v-avatar size="32">
-                <img :alt="club.name" :src="club.imageUrl ?? '/uploads/avatars/default_ava.jpg'">
-              </v-avatar>
-              <span class="meta-club-name">{{ club.name }}</span>
+            <div v-else class="d-flex flex-wrap ga-3 mt-1">
+              <router-link
+                v-for="club in bookClubs"
+                :key="club.id"
+                class="club-card text-decoration-none"
+                :to="`/clubs/${club.id}`"
+              >
+                <v-img
+                  cover
+                  :src="club.imageUrl ? resolveUrl(club.imageUrl) : ''"
+                  style="width: 120px; aspect-ratio: 1; border-radius: 8px; background: #f0e8ea;"
+                >
+                  <template v-if="!club.imageUrl" #default>
+                    <div class="d-flex align-center justify-center fill-height">
+                      <v-icon color="secondary" opacity="0.5" size="40">mdi-bookshelf</v-icon>
+                    </div>
+                  </template>
+                </v-img>
+                <p class="text-caption text-center mt-1" style="width: 120px; color: #333; line-height: 1.3;">{{ club.name }}</p>
+              </router-link>
             </div>
           </div>
         </v-col>
@@ -119,6 +134,7 @@
   import type { Route, Tag, User } from '@/types/user.interface';
   import type { Book } from '@/types/general.interface';
   import { apiFetch } from '@/plugins/api';
+  import { resolveUrl } from '@/utils/url';
   import ProfileInterests from '@/components/Profile/ProfileInterests.vue';
   import ProfileAwards from '@/components/Profile/ProfileAwards.vue';
   import type { DisplayBadge } from '@/components/Profile/ProfileAwards.vue';
@@ -263,12 +279,22 @@
     }
   };
 
+  const fetchBookClubs = async () => {
+    try {
+      const data = await apiFetch('/clubs/my') as { Id: string; Name: string; AvatarUrl: string | null }[];
+      bookClubs.value = data.map(c => ({ id: c.Id, name: c.Name, imageUrl: c.AvatarUrl }));
+    } catch (err) {
+      console.error('[profile.vue] Failed to fetch book clubs:', err);
+    }
+  };
+
   onMounted(async () => {
     await fetchProfile();
     await fetchAllTags();
     await fetchUserTags();
     await fetchBadges();
     await fetchFriends();
+    await fetchBookClubs();
   });
 </script>
 

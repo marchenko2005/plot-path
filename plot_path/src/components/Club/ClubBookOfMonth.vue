@@ -88,6 +88,30 @@
     >
       Choose the next book
     </v-btn>
+    <v-btn
+      v-else-if="isMember"
+      block
+      class="mt-4"
+      color="rgba(0,0,0,0.3)"
+      rounded="lg"
+      style="color: white;"
+      variant="flat"
+      @click="$emit('leave')"
+    >
+      Leave the club
+    </v-btn>
+    <v-btn
+      v-else
+      block
+      class="mt-4"
+      color="rgba(0,0,0,0.3)"
+      rounded="lg"
+      style="color: white;"
+      variant="flat"
+      @click="$emit('join')"
+    >
+      Join the club
+    </v-btn>
   </v-card>
 </template>
 
@@ -100,15 +124,18 @@
     readingProgress: number
     modelValue: number
     isAdmin: boolean
+    isMember: boolean
   }>();
 
   defineEmits<{
     'update:modelValue': [value: number]
     rate: []
     'choose-book': []
+    leave: []
+    join: []
   }>();
 
-  function formatDate(dateStr: string): string {
+  function formatDate (dateStr: string): string {
     return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 </script>

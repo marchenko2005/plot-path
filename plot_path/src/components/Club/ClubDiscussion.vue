@@ -1,6 +1,6 @@
 <template>
   <div class="discussion d-flex flex-column">
-    <div v-if="isAdmin" class="pa-3 border-b" style="background: rgba(255,255,255,0.1);">
+    <div class="pa-3 border-b" style="background: rgba(255,255,255,0.1);">
       <p class="text-caption font-weight-bold text-white">Discussion</p>
     </div>
 
@@ -13,7 +13,7 @@
         style="gap: 8px;"
       >
         <v-avatar size="30">
-          <v-img v-if="resolveUrl(msg.AvatarUrl)" cover :src="resolveUrl(msg.AvatarUrl)" />
+          <v-img v-if="msg.AvatarUrl" cover :src="msg.AvatarUrl" />
           <v-avatar v-else color="secondary" size="30">
             <span class="text-caption text-white">{{ msg.Username[0] }}</span>
           </v-avatar>
@@ -30,7 +30,7 @@
       </p>
     </div>
 
-    <div v-if="isAdmin" class="pa-3 d-flex align-center ga-2" style="background: rgba(255,255,255,0.1);">
+    <div class="pa-3 d-flex align-center ga-2" style="background: rgba(255,255,255,0.1);">
       <v-text-field
         v-model="draft"
         density="compact"
@@ -50,12 +50,10 @@
 <script setup lang="ts">
   import { nextTick, ref, watch } from 'vue';
   import type { Message } from '@/types/club';
-  import { resolveUrl } from '@/utils/url';
 
   const props = defineProps<{
     messages: Message[]
     myId: string
-    isAdmin: boolean
   }>();
 
   const emit = defineEmits<{ send: [text: string] }>();
