@@ -117,6 +117,70 @@ const friendship = {
       `);
     return result.recordset;
   },
+
+  // People You May Know: mutual friends × 0.5 + shared tags × 0.3 + shared clubs × 0.2
+  async getSuggestions(userId, limit = 10) {
+    const pool = await sql.connect(config);
+
+    const result = await pool.request()
+      .input('UserId', sql.UniqueIdentifier, userId)
+      .query(`
+        SELECT
+          u.Id, u.Username, u.AvatarUrl,
+          (
+            SELECT COUNT(*)
+            FROM Friendships f1
+            JOIN Friendships f2
+              ON CASE WHEN f1.UserId1 = @UserId THEN f1.UserId2 ELSE f1.UserId1 END
+               = CASE WHEN f2.UserId1 = u.Id   THEN f2.UserId2 ELSE f2.UserId1 END
+            WHERE (f1.UserId1 = @UserId OR f1.UserId2 = @UserId)
+              AND (f2.UserId1 = u.Id   OR f2.UserId2 = u.Id)
+          ) AS MutualFriends,
+          (
+            SELECT COUNT(*)
+            FROM UserTagPreferences t1
+            JOIN UserTagPreferences t2 ON t1.TagId = t2.TagId
+            WHERE t1.UserId = @UserId AND t2.UserId = u.Id
+          ) AS SharedTags,
+          (
+            SELECT COUNT(*)
+            FROM ClubMembers c1
+            JOIN ClubMembers c2 ON c1.ClubId = c2.ClubId
+            WHERE c1.UserId = @UserId AND c2.UserId = u.Id
+          ) AS SharedClubs
+        FROM Users u
+        WHERE u.Id != @UserId
+          AND NOT EXISTS (
+            SELECT 1 FROM Friendships
+            WHERE (UserId1 = @UserId AND UserId2 = u.Id)
+               OR (UserId1 = u.Id   AND UserId2 = @UserId)
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM FriendRequests
+            WHERE ((SenderId = @UserId AND ReceiverId = u.Id)
+               OR  (SenderId = u.Id   AND ReceiverId = @UserId))
+              AND Status = 'pending'
+          )
+      `);
+
+    return result.recordset
+      .map(u => ({
+        Id:            u.Id,
+        Username:      u.Username,
+        AvatarUrl:     u.AvatarUrl,
+        MutualFriends: u.MutualFriends,
+        SharedTags:    u.SharedTags,
+        SharedClubs:   u.SharedClubs,
+        Score: Math.round(
+          u.MutualFriends * 0.5 +
+          u.SharedTags    * 0.3 +
+          u.SharedClubs   * 0.2
+        ),
+      }))
+      .filter(u => u.Score > 0)
+      .sort((a, b) => b.Score - a.Score)
+      .slice(0, limit);
+  },
 };
 
 module.exports = friendship;

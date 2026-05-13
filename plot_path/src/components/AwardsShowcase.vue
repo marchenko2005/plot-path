@@ -3,7 +3,7 @@
     <v-container>
       <v-row class="content">
         <v-col>
-          <h2 class="title">What you can<br>earn</h2>
+          <h2 class="title">{{ t('awardsShowcase.title') }}</h2>
         </v-col>
         <v-col>
           <div class="badges">
@@ -17,7 +17,7 @@
               >
             </div>
             <v-btn class="view-all" variant="text" @click="$router.push('/awards')">
-              View All Awards
+              {{ t('awardsShowcase.viewAll') }}
             </v-btn>
           </div>
         </v-col>
@@ -27,21 +27,24 @@
 </template>
 
 <script lang="ts" setup>
-  import { ref } from 'vue';
+import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-  interface Badge {
-    name: string;
-    img: string;
-  }
+const { t } = useI18n();
 
-  const badges = ref<Badge[]>([
-    { name: 'Bookshelf Master', img: '/images/award_1.webp' },
-    { name: '7-Day Streak', img: '/images/award_2.webp' },
-    { name: 'Book Completed', img: '/images/award_3.webp' },
-    { name: 'Map Explorer', img: '/images/award_4.webp' },
-    { name: 'Trophy Winner', img: '/images/award_5.webp' },
-    { name: 'Time Keeper', img: '/images/award_6.webp' },
-  ]);
+interface Badge {
+  name: string;
+  img: string;
+}
+
+const badges = ref<Badge[]>([
+  { name: 'Bookshelf Master', img: '/images/award_1.webp' },
+  { name: '7-Day Streak',     img: '/images/award_2.webp' },
+  { name: 'Book Completed',   img: '/images/award_3.webp' },
+  { name: 'Map Explorer',     img: '/images/award_4.webp' },
+  { name: 'Trophy Winner',    img: '/images/award_5.webp' },
+  { name: 'Time Keeper',      img: '/images/award_6.webp' },
+]);
 </script>
 
 <style lang="scss" scoped>

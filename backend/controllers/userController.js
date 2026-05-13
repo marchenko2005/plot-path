@@ -392,7 +392,63 @@ const userController = {
         console.error('Error fetching user tags:', error);
         res.status(500).json({ error: 'Failed to fetch user tags.' });
     }
+  },
+
+  // GET /api/user/:userId/compatibility
+  // Reading Compatibility Score: Jaccard(tags) × 60% + RatingSimilarity × 40%
+  async getCompatibility(req, res) {
+    const viewerId = req.user.userId;
+    const { userId: targetId } = req.params;
+
+    if (viewerId === targetId) {
+      return res.json({ score: 100, tagJaccard: 1, ratingSimilarity: 1, sharedBooks: 0 });
     }
+
+    try {
+      const pool = await sql.connect(config);
+
+      const result = await pool.request()
+        .input('A', sql.UniqueIdentifier, viewerId)
+        .input('B', sql.UniqueIdentifier, targetId)
+        .query(`
+          SELECT
+            (SELECT COUNT(*) FROM UserTagPreferences WHERE UserId = @A) AS TagsA,
+            (SELECT COUNT(*) FROM UserTagPreferences WHERE UserId = @B) AS TagsB,
+            (SELECT COUNT(*)
+             FROM UserTagPreferences t1
+             JOIN UserTagPreferences t2 ON t1.TagId = t2.TagId
+             WHERE t1.UserId = @A AND t2.UserId = @B)                  AS SharedTags,
+            (SELECT COUNT(*)
+             FROM BookReviews r1
+             JOIN BookReviews r2 ON r1.BookId = r2.BookId
+             WHERE r1.UserId = @A AND r2.UserId = @B)                  AS SharedBooks,
+            (SELECT AVG(ABS(CAST(r1.Rating AS FLOAT) - CAST(r2.Rating AS FLOAT)))
+             FROM BookReviews r1
+             JOIN BookReviews r2 ON r1.BookId = r2.BookId
+             WHERE r1.UserId = @A AND r2.UserId = @B)                  AS AvgRatingDiff
+        `);
+
+      const row = result.recordset[0];
+      const tagUnion = row.TagsA + row.TagsB - row.SharedTags;
+      const tagJaccard = tagUnion > 0 ? row.SharedTags / tagUnion : 0;
+      const ratingSimilarity = row.SharedBooks > 0
+        ? Math.max(0, 1 - row.AvgRatingDiff / 4)
+        : 0;
+
+      const score = Math.round((tagJaccard * 0.6 + ratingSimilarity * 0.4) * 100);
+
+      res.json({
+        score,
+        tagJaccard:      Math.round(tagJaccard * 100) / 100,
+        ratingSimilarity: Math.round(ratingSimilarity * 100) / 100,
+        sharedBooks:     row.SharedBooks,
+        sharedTags:      row.SharedTags,
+      });
+    } catch (error) {
+      console.error('Error computing compatibility:', error);
+      res.status(500).json({ error: 'Failed to compute compatibility' });
+    }
+  },
 
 };
 

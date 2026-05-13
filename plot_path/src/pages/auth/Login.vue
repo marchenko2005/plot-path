@@ -6,30 +6,27 @@
         <v-col class="login-form-section" cols="12" md="6">
           <div class="form-content">
             <img alt="logo" class="logo" src="/logo.svg">
-            <h2 class="form-title">Welcome Back</h2>
-            <p class="form-subtitle">
-              Your next chapter is waiting. The story continues — and you're the hero.
-              Sign in to pick up your journey and unlock new achievements.
-            </p>
+            <h2 class="form-title">{{ t('login.title') }}</h2>
+            <p class="form-subtitle">{{ t('login.subtitle') }}</p>
 
             <v-form>
-              <BaseFormGroup label="Email">
+              <BaseFormGroup :label="t('login.email')">
                 <v-text-field
                   v-model="email"
                   class="input"
                   density="comfortable"
                   hide-details
-                  placeholder="Example@email.com"
+                  :placeholder="t('login.emailPlaceholder')"
                   type="email"
                   variant="solo"
                 />
               </BaseFormGroup>
-              <BaseFormGroup label="Password">
+              <BaseFormGroup :label="t('login.password')">
                 <v-text-field
                   v-model="password"
                   class="input"
                   density="comfortable"
-                  placeholder="At least 8 characters"
+                  :placeholder="t('login.passwordPlaceholder')"
                   type="password"
                   variant="solo"
                 />
@@ -51,13 +48,13 @@
                 size="large"
                 @click="submit"
               >
-                Sign in
+                {{ t('login.signIn') }}
               </v-btn>
             </v-form>
 
             <p class="signup-prompt">
-              Don’t you have an account?
-              <router-link class="signup-link" to="/auth/signup">Sign up</router-link>
+              {{ t('login.noAccount') }}
+              <router-link class="signup-link" to="/auth/signup">{{ t('login.signUp') }}</router-link>
             </p>
           </div>
         </v-col>
@@ -75,32 +72,34 @@
 </template>
 
 <script lang="ts" setup>
-  import BaseFormGroup from '@/components/Base/BaseFormGroup.vue';
-  import { ref } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { useAuthStore } from '@/store/auth';
+import BaseFormGroup from '@/components/Base/BaseFormGroup.vue';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/store/auth';
+import { useI18n } from 'vue-i18n';
 
-  const router = useRouter();
-  const authStore = useAuthStore();
+const { t } = useI18n();
+const router = useRouter();
+const authStore = useAuthStore();
 
-  const email = ref('');
-  const password = ref('');
-  const image = '/images/auth.webp';
-  const loading = ref(false);
-  const error = ref('');
+const email = ref('');
+const password = ref('');
+const image = '/images/auth.webp';
+const loading = ref(false);
+const error = ref('');
 
-  const submit = async () => {
-    loading.value = true;
-    error.value = '';
-    try {
-      await authStore.login(email.value, password.value);
-      router.push('/routes');
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Login failed. Check your credentials.';
-    } finally {
-      loading.value = false;
-    }
-  };
+const submit = async () => {
+  loading.value = true;
+  error.value = '';
+  try {
+    await authStore.login(email.value, password.value);
+    router.push('/routes');
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : t('login.error');
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 

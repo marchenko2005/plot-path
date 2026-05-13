@@ -8,11 +8,11 @@
       background-color-books="#4A2B33"
       :books="books"
       :buttons="[
-        { label: 'Start Your Route', color: '#d98b9c', textColor: '#fff', action: startRoute },
-        { label: 'Explore awards', color: '#4A2B33', textColor: '#fff', action: exploreAwards }
+        { label: t('home.startRoute'), color: '#d98b9c', textColor: '#fff', action: startRoute },
+        { label: t('home.exploreAwards'), color: '#4A2B33', textColor: '#fff', action: exploreAwards }
       ]"
       :subtitle="subtitle"
-      title="Route of the Month"
+      :title="t('home.routeOfMonth')"
     />
     <AwardsShowcase />
     <LibraryGallery />
@@ -21,8 +21,9 @@
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, ref } from 'vue';
+  import { ref, onMounted, computed } from 'vue';
   import { useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n';
   import type { Book } from '@/types/general.interface';
 
   const API = import.meta.env.VITE_API_URL;
@@ -32,10 +33,10 @@
     'Content-Type': 'application/json',
   };
   const router = useRouter();
-  const links = [
-    { label: 'About', path: '#about' },
-    { label: 'Route of the month', path: '#route' },
-  ];
+  const links = computed(() => [
+    { label: t('header.links.about'), path: '#about' },
+    { label: t('header.links.routeOfMonth'), path: '#route' },
+  ]);
 
   const books = ref<Book[]>([]);
   const subtitle = ref('Dystopian Books'); // fallback значення

@@ -1,12 +1,12 @@
 <template>
   <Header />
   <v-container class="achievements-page" fluid>
-    <h1 class="title text-center mb-10">All PlotPath Achievements</h1>
+    <h1 class="title text-center mb-10">{{ t('awardsPage.title') }}</h1>
 
     <v-row dense>
       <v-col
-        v-for="achievement in achievements"
-        :key="achievement.title"
+        v-for="(achievement, index) in achievements"
+        :key="index"
         class="achievement-item"
         cols="12"
         md="6"
@@ -32,38 +32,27 @@
 </template>
 
 <script setup lang="ts">
-  const achievements = [
-    {
-      icon: '/images/award_1.webp',
-      title: 'First Route Completed',
-      description: 'Awarded for completing the first book on PlotPath.',
-    },
-    {
-      icon: '/images/award_2.webp',
-      title: 'First Book Completed',
-      description: 'Granted for finishing the first book route.',
-    },
-    {
-      icon: '/images/award_3.webp',
-      title: 'Monthly Route Master',
-      description: 'Awarded for completing 7 routes within a single month.',
-    },
-    {
-      icon: '/images/award_4.webp',
-      title: 'Monthly Champion',
-      description: 'Awarded for completing the community-wide Route of the Month.',
-    },
-    {
-      icon: '/images/award_5.webp',
-      title: 'Multiple Genres Explorer',
-      description: 'Awarded for completing at least one route in three different book genres.',
-    },
-    {
-      icon: '/images/award_6.webp',
-      title: 'Speed Reader',
-      description: 'Awarded for completing a full route within 72 hours from the moment it was started.',
-    },
-  ];
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
+const icons = [
+  '/images/award_1.webp',
+  '/images/award_2.webp',
+  '/images/award_3.webp',
+  '/images/award_4.webp',
+  '/images/award_5.webp',
+  '/images/award_6.webp',
+];
+
+const achievements = computed(() =>
+  icons.map((icon, i) => ({
+    icon,
+    title:       t(`awardsPage.achievements[${i}].title`),
+    description: t(`awardsPage.achievements[${i}].description`),
+  }))
+);
 </script>
 
 <style scoped lang="scss">

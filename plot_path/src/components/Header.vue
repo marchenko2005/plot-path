@@ -28,8 +28,8 @@
           </template>
 
           <div v-else class="header-buttons">
-            <v-btn class="header-button" to="/auth/signup">Sign Up</v-btn>
-            <v-btn class="header-button log-in" to="/auth/login">Log In</v-btn>
+            <v-btn class="header-button" to="/auth/signup">{{ t('header.signUp') }}</v-btn>
+            <v-btn class="header-button log-in" to="/auth/login">{{ t('header.logIn') }}</v-btn>
           </div>
         </v-col>
       </v-row>
@@ -44,18 +44,19 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n';
   import { apiFetch } from '@/plugins/api';
   import { disconnectSocket } from '@/plugins/socket';
 
-  const { showImage, links } = defineProps<{
-    showImage?: boolean;
-    links?: { label: string; path: string }[];
-  }>();
+const { showImage, links } = defineProps<{
+  showImage?: boolean;
+  links?: { label: string; path: string }[];
+}>();
 
-  const router = useRouter();
+const router = useRouter();
+const { t, locale } = useI18n();
 
-  // Token
-  const accessToken = localStorage.getItem('accessToken') || '';
+const accessToken = localStorage.getItem('accessToken') || '';
 
   const user = ref<{
     id: string;
@@ -134,6 +135,38 @@
       background-color: rgb(var(--v-theme-yellow));
       color: rgb(var(--v-theme-white));
     }
+  }
+}
+
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: rgb(var(--v-theme-primary));
+
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgb(var(--v-theme-primary));
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+
+    &.active {
+      opacity: 1;
+      font-weight: 700;
+    }
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .divider {
+    opacity: 0.4;
   }
 }
 </style>

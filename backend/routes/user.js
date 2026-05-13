@@ -32,7 +32,10 @@ router.get('/routes/completed', authenticate, userController.getCompletedRoutes)
 
 // Запропоновані маршрути (які ще не початі)
 router.get('/routes/suggested', authenticate, userController.getSuggestedRoutes);
-// Усі теги користувача 
+// Усі теги користувача
 router.get('/tags', authenticate, userController.getUserTags);
+
+// Reading Compatibility Score з іншим користувачем
+router.get('/:userId/compatibility', authenticate, userController.getCompatibility);
 
 module.exports = router;
