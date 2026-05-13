@@ -20,7 +20,7 @@
               v-for="book in filteredBooks"
               :key="book.Id"
               :active="selected?.Id === book.Id"
-              active-color="primary"
+              color="primary"
               rounded="lg"
               @click="selected = book"
             >
@@ -37,24 +37,48 @@
 
         <v-row dense>
           <v-col cols="6">
-            <v-text-field
-              v-model="startDate"
-              density="compact"
-              hide-details
-              label="Start date"
-              type="date"
-              variant="outlined"
-            />
+            <v-menu v-model="startMenu" :close-on-content-click="false">
+              <template #activator="{ props: activatorProps }">
+                <v-text-field
+                  density="compact"
+                  hide-details
+                  label="Start date"
+                  :model-value="formatDisplay(startDate)"
+                  prepend-inner-icon="mdi-calendar"
+                  readonly
+                  variant="outlined"
+                  v-bind="activatorProps"
+                />
+              </template>
+              <v-date-picker
+                color="secondary"
+                hide-header
+                :model-value="startDate"
+                @update:model-value="startDate = $event; startMenu = false"
+              />
+            </v-menu>
           </v-col>
           <v-col cols="6">
-            <v-text-field
-              v-model="endDate"
-              density="compact"
-              hide-details
-              label="End date"
-              type="date"
-              variant="outlined"
-            />
+            <v-menu v-model="endMenu" :close-on-content-click="false">
+              <template #activator="{ props: activatorProps }">
+                <v-text-field
+                  density="compact"
+                  hide-details
+                  label="End date"
+                  :model-value="formatDisplay(endDate)"
+                  prepend-inner-icon="mdi-calendar"
+                  readonly
+                  variant="outlined"
+                  v-bind="activatorProps"
+                />
+              </template>
+              <v-date-picker
+                color="secondary"
+                hide-header
+                :model-value="endDate"
+                @update:model-value="endDate = $event; endMenu = false"
+              />
+            </v-menu>
           </v-col>
         </v-row>
       </v-card-text>
@@ -95,8 +119,10 @@
 
   const search = ref('');
   const selected = ref<Book | null>(null);
-  const startDate = ref('');
-  const endDate = ref('');
+  const startDate = ref<Date | null>(null);
+  const endDate = ref<Date | null>(null);
+  const startMenu = ref(false);
+  const endMenu = ref(false);
 
   const filteredBooks = computed(() => {
     const q = search.value.toLowerCase();
@@ -106,17 +132,30 @@
     );
   });
 
+  function formatDisplay (date: Date | null): string {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function toIso (date: Date): string {
+    return new Date(date).toISOString().slice(0, 10);
+  }
+
   watch(() => props.modelValue, open => {
     if (!open) {
       selected.value = null;
-      startDate.value = '';
-      endDate.value = '';
+      startDate.value = null;
+      endDate.value = null;
       search.value = '';
     }
   });
 
-  function confirm() {
+  function confirm () {
     if (!selected.value || !startDate.value || !endDate.value) return;
-    emit('confirm', { bookId: selected.value.Id, startDate: startDate.value, endDate: endDate.value });
+    emit('confirm', {
+      bookId: selected.value.Id,
+      startDate: toIso(startDate.value),
+      endDate: toIso(endDate.value),
+    });
   }
 </script>

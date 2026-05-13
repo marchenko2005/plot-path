@@ -26,7 +26,7 @@
         </div>
       </div>
 
-      <div class="d-flex align-center ga-2">
+      <div class="d-flex align-center ga-2" style="cursor: pointer;" @click="membersDialog = true">
         <div class="d-flex">
           <v-avatar
             v-for="(member, i) in club.members.slice(0, 4)"
@@ -41,16 +41,6 @@
           </v-avatar>
         </div>
         <span class="text-caption text-medium-emphasis">{{ club.MemberCount }} members</span>
-        <v-btn
-          v-if="!isAdmin"
-          color="error"
-          density="compact"
-          size="small"
-          variant="outlined"
-          @click="$emit('leave')"
-        >
-          Leave
-        </v-btn>
       </div>
     </div>
   </div>
@@ -69,12 +59,17 @@
       </v-chip>
     </div>
   </div>
+
+  <ClubMembersDialog v-model="membersDialog" :members="club.members" />
 </template>
 
 <script setup lang="ts">
+  import { ref } from 'vue';
   import type { Club } from '@/types/club';
   import { resolveUrl } from '@/utils/url';
 
   defineProps<{ club: Club; isAdmin: boolean }>();
-  defineEmits<{ 'copy-invite': []; leave: [] }>();
+  defineEmits<{ 'copy-invite': [] }>();
+
+  const membersDialog = ref(false);
 </script>

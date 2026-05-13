@@ -26,10 +26,7 @@
       />
     </div>
     <p v-else-if="searched && !searchResults.length" class="text-medium-emphasis text-body-2 mt-4">
-      No clubs found.
-    </p>
-    <p v-else-if="!searchQuery" class="text-medium-emphasis text-body-2 mt-4">
-      Type to search public clubs.
+      No public clubs found.
     </p>
   </div>
 </template>
@@ -51,16 +48,10 @@
 
   function clearSearch () {
     searchQuery.value = '';
-    searchResults.value = [];
-    searched.value = false;
+    runSearch();
   }
 
   async function runSearch () {
-    if (!searchQuery.value.trim()) {
-      searchResults.value = [];
-      searched.value = false;
-      return;
-    }
     try {
       const data = await apiFetch(
         `/clubs/search?q=${encodeURIComponent(searchQuery.value)}&page=1`,
@@ -71,4 +62,6 @@
       console.error('[clubs] search error:', err);
     }
   }
+
+  runSearch();
 </script>

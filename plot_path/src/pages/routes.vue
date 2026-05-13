@@ -6,54 +6,25 @@
     </h3>
 
     <div id="about" class="routes-page__description">
-      Based on your reading preferences, we’ve handpicked routes just for you.<br>
+      Based on your reading preferences, we've handpicked routes just for you.<br>
       Explore stories that match your favorite genres, themes, and authors —
       and make your journey<br> truly your own.
     </div>
 
     <RouteOfTheMonth
-      v-if="personalizedRoutes.length >= 1"
+      v-for="(item, i) in routeDisplayItems"
+      :key="item.route.Id"
       background-color="#fff"
-      background-color-books="#4A2B33"
-      :books="books1"
+      :background-color-books="ROUTE_CONFIGS[i].booksColor"
+      :books="item.books"
       :buttons="[{
         label: 'Start Your Route',
-        color: '#D27487',
+        color: ROUTE_CONFIGS[i].buttonColor,
         textColor: '#fff',
-        action: () => startRoute(personalizedRoutes[0].Id)
+        action: () => startRoute(item.route.Id),
       }]"
-      :subtitle="getRouteInfo(personalizedRoutes[0])"
-      title="1. Most Read Genre-Based Route"
-    />
-
-    <RouteOfTheMonth
-      v-if="personalizedRoutes.length >= 2"
-      background-color="#fff"
-      background-color-books="#6F6F64"
-      :books="books2"
-      :buttons="[{
-        label: 'Start Your Route',
-        color: '#4A2B33',
-        textColor: '#fff',
-        action: () => startRoute(personalizedRoutes[1].Id)
-      }]"
-      :subtitle="getRouteInfo(personalizedRoutes[1])"
-      title="2 Theme-Based Route "
-    />
-
-    <RouteOfTheMonth
-      v-if="personalizedRoutes.length >= 3"
-      background-color="#fff"
-      background-color-books="#D27487"
-      :books="books3"
-      :buttons="[{
-        label: 'Start Your Route',
-        color: '#6F6F64',
-        textColor: '#fff',
-        action: () => startRoute(personalizedRoutes[2].Id)
-      }]"
-      :subtitle="getRouteInfo(personalizedRoutes[2])"
-      title="3. Combined Genre + Trope."
+      :subtitle="`Category: ${item.route.Category || 'No category'}`"
+      :title="ROUTE_CONFIGS[i].title"
     />
 
     <div class="turn-the-page">
@@ -70,22 +41,24 @@
       id="route"
       background-color="#fff"
       background-color-books="#4A2B33"
-      :books="books4"
+      :books="routeBooks[monthlyRoute.Id] ?? []"
       :buttons="[{
         label: 'Start Your Route',
         color: '#d98b9c',
         textColor: '#fff',
-        action: () => startRoute(monthlyRoute.Id)
+        action: () => startRoute(monthlyRoute!.Id),
       }]"
-      :subtitle="monthlyRoute.Description"
+      :subtitle="monthlyRoute.Description ?? ''"
       title="Route of the Month"
     />
 
     <RouteVoting />
     <Footer />
   </div>
-</template><script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+</template>
+
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue';
   import { useModal } from '@/composables/useModal';
   import Header from '@/components/Header.vue';
   import Footer from '@/components/Footer.vue';
@@ -100,18 +73,16 @@
     Category: string | null;
   }
 
-  const profile = ref<any>(null);
-  const { show } = useModal();
-  const personalizedRoutes = ref<Route[]>([]);
-  const monthlyRoute = ref<Route | null>(null);
+  const ROUTE_CONFIGS = [
+    { booksColor: '#4A2B33', buttonColor: '#D27487', title: '1. Most Read Genre-Based Route' },
+    { booksColor: '#6F6F64', buttonColor: '#4A2B33', title: '2. Theme-Based Route' },
+    { booksColor: '#D27487', buttonColor: '#6F6F64', title: '3. Combined Genre + Trope' },
+  ] as const;
 
-  const books1 = ref<Book[]>([]);
-  const books2 = ref<Book[]>([]);
-  const books3 = ref<Book[]>([]);
-  const books4 = ref<Book[]>([]);
-
-  const API = 'http://localhost:3000/api';
+  const API = import.meta.env.VITE_API_URL;
+  const BASE_URL = import.meta.env.VITE_BASE_URL;
   const token = localStorage.getItem('accessToken') || '';
+  const headers = { Authorization: `Bearer ${token}` };
 
   const links = [
     { label: 'About', path: '#about' },
@@ -119,97 +90,68 @@
     { label: 'Voting', path: '#voting' },
   ];
 
+  const { show } = useModal();
+
+  const profile = ref<any>(null);
+  const personalizedRoutes = ref<Route[]>([]);
+  const monthlyRoute = ref<Route | null>(null);
+  const routeBooks = ref<Record<string, Book[]>>({});
+
+  const routeDisplayItems = computed(() =>
+    personalizedRoutes.value.map(route => ({
+      route,
+      books: routeBooks.value[route.Id] ?? [],
+    }))
+  );
+
+  const fetchBooks = async (routeId: string): Promise<Book[]> => {
+    const res = await fetch(`${API}/routes/${routeId}/books`, { headers });
+    const data = await res.json();
+    return data.books.map((book: any) => ({
+      ...book,
+      CoverUrl: book.CoverUrl?.startsWith('/uploads') ? `${BASE_URL}${book.CoverUrl}` : book.CoverUrl,
+      progressPercent: data.progressPercent ?? null,
+    }));
+  };
+
   onMounted(async () => {
     try {
-      const headers = { Authorization: `Bearer ${token}` };
+      const [profData, routeData] = await Promise.all([
+        fetch(`${API}/user/profile`, { headers }).then(r => r.json()),
+        fetch(`${API}/routes/daily`, { headers }).then(r => r.json()),
+      ]);
 
-      console.log('[routes.vue] Fetching profile...');
-      const profRes = await fetch(`${API}/user/profile`, { headers });
-      const profData = await profRes.json();
-      console.log('[routes.vue] Profile loaded:', profData);
       profile.value = profData.user;
-
-      console.log('[routes.vue] Fetching daily routes...');
-      const routeRes = await fetch(`${API}/routes/daily`, { headers });
-      const routeData = await routeRes.json();
-      console.log('[routes.vue] Routes loaded:', routeData);
-
-      // Просто беремо перші три персоналізовані маршрути в порядку, як повернув сервер
       personalizedRoutes.value = routeData.personalized.slice(0, 3);
-      monthlyRoute.value = routeData.monthly || null;
+      monthlyRoute.value = routeData.monthly ?? null;
 
-      // Підвантажуємо книги для кожного маршруту
-      if (personalizedRoutes.value[0]) {
-        console.log('[routes.vue] Fetching books for route 1...');
-        books1.value = await fetchBooks(personalizedRoutes.value[0].Id);
-      }
+      const allRouteIds = [
+        ...personalizedRoutes.value.map(r => r.Id),
+        ...(monthlyRoute.value ? [monthlyRoute.value.Id] : []),
+      ];
 
-      if (personalizedRoutes.value[1]) {
-        console.log('[routes.vue] Fetching books for route 2...');
-        books2.value = await fetchBooks(personalizedRoutes.value[1].Id);
-      }
-
-      if (personalizedRoutes.value[2]) {
-        console.log('[routes.vue] Fetching books for route 3...');
-        books3.value = await fetchBooks(personalizedRoutes.value[2].Id);
-      }
-
-      if (monthlyRoute.value) {
-        console.log('[routes.vue] Fetching books for monthly route...');
-        books4.value = await fetchBooks(monthlyRoute.value.Id);
-      }
-
+      const results = await Promise.all(allRouteIds.map(id => fetchBooks(id)));
+      routeBooks.value = Object.fromEntries(allRouteIds.map((id, i) => [id, results[i]]));
     } catch (error) {
       console.error('[routes.vue] Error loading data:', error);
     }
   });
 
-  const fetchBooks = async (routeId: string): Promise<Book[]> => {
-    const res = await fetch(`${API}/routes/${routeId}/books`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const data = await res.json();
-
-    return data.books.map((book: any) => {
-      const fullCoverUrl = book.CoverUrl?.startsWith('/uploads')
-        ? `http://localhost:3001${book.CoverUrl}`
-        : book.CoverUrl;
-
-      return {
-        ...book,
-        CoverUrl: fullCoverUrl,
-        progressPercent: data.progressPercent || null,
-      };
-    });
-  };
-
   const startRoute = async (routeId: string) => {
-    console.log(`[Route] Start clicked for: ${routeId}`);
     try {
       const res = await fetch(`${API}/routes/start/${routeId}`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { ...headers, 'Content-Type': 'application/json' },
       });
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.message || 'Failed to start route');
 
-      console.log('[Route] Route started:', data.message);
-      // Можна оновити інтерфейс, перенаправити користувача або показати сповіщення
       show('Your route has been started!', 'Route started', 'success');
     } catch (err) {
       console.error('[Route] Error starting route:', err);
       show('Something went wrong. Please try again.', 'Failed to start route', 'error');
     }
-  };
-
-  const getRouteInfo = (route: Route) => {
-    return `Category: ${route.Category || 'No category'}`;
   };
 </script>
 

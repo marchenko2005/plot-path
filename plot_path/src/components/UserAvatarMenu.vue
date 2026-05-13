@@ -2,10 +2,10 @@
   <v-menu location="bottom end" min-width="200px">
     <template #activator="{ props }">
       <v-badge
-        :content="unread"
-        :model-value="unread > 0"
         color="primary"
+        :content="unread"
         location="top end"
+        :model-value="unread > 0"
       >
         <v-btn icon v-bind="props">
           <v-avatar color="brown" size="large">
@@ -30,8 +30,8 @@
             Messages
             <v-badge
               v-if="unread > 0"
-              :content="unread"
               color="primary"
+              :content="unread"
               inline
             />
           </v-btn>

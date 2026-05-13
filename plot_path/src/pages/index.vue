@@ -26,9 +26,7 @@
   import { useI18n } from 'vue-i18n';
   import type { Book } from '@/types/general.interface';
 
-  const { t } = useI18n();
-
-  const API = 'http://localhost:3000/api';
+  const API = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('accessToken') || '';
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -58,14 +56,13 @@
 
       return data.books.map((book: any) => {
         const fullCoverUrl = book.CoverUrl?.startsWith('/uploads')
-          ? `http://localhost:3000${book.CoverUrl}`
+          ? `${import.meta.env.VITE_BASE_URL}${book.CoverUrl}`
           : book.CoverUrl;
 
         console.log('[fetchBooks] Final cover URL:', fullCoverUrl);
 
         return {
-          Id: book.Id,
-          Title: book.Title,
+          ...book,
           CoverUrl: fullCoverUrl,
         };
       });

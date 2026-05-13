@@ -1,22 +1,17 @@
 <template>
-  <div style="background: #BF7483; min-height: 100vh;">
-    <v-toolbar color="secondary" flat>
-      <v-icon class="ml-4 mr-2" color="white" size="22">mdi-book-open-variant</v-icon>
-      <v-toolbar-title class="text-white font-weight-bold text-body-1">PlotPath · Book Clubs</v-toolbar-title>
-      <v-spacer />
-      <UserAvatarMenu v-if="menuUser" :user="menuUser" @logout="handleLogout" />
-    </v-toolbar>
+  <div style="background: #f2eaea;">
+    <ClubsToolbar breadcrumb />
 
     <div v-if="loaded" class="d-flex justify-center pa-6">
       <v-card
+        class="pa-6 pa-sm-8"
         elevation="0"
         rounded="xl"
-        style="width: 100%; max-width: 640px; background: #CF8A96;"
-        class="pa-6 pa-sm-8"
+        style="width: 100%; max-width: 840px; background: #CF8A96;"
       >
         <template v-if="mode === 'create'">
           <h1 class="text-h5 font-weight-bold mb-1" style="color: #1e1012; line-height: 1.2;">
-            Found a<br>new club
+            Found a new club
           </h1>
           <p class="text-caption mb-6" style="color: #3a1e24;">
             Unite with like-minded readers around your favourite books — reading together is always better.
@@ -29,9 +24,9 @@
             <p class="text-body-2 font-weight-bold mb-2" style="color: #1e1012;">Club Name</p>
             <v-text-field
               v-model="form.name"
-              :error-messages="errors.name"
               bg-color="white"
               density="compact"
+              :error-messages="errors.name"
               rounded="lg"
               variant="solo"
               @input="errors.name = ''"
@@ -44,11 +39,17 @@
               :style="`border: 2px dashed ${errors.cover ? '#b00020' : '#7B5B65'}; background: rgba(255,255,255,0.25); cursor: pointer; overflow: hidden;`"
               @click="triggerUpload"
             >
-              <input ref="fileInput" accept="image/png,image/jpeg" hidden type="file" @change="onFileChange" />
+              <input
+                ref="fileInput"
+                accept="image/png,image/jpeg"
+                hidden
+                type="file"
+                @change="onFileChange"
+              >
               <v-img
                 v-if="previewUrl || form.avatarUrl"
-                :src="previewUrl || resolveUrl(form.avatarUrl)"
                 cover
+                :src="previewUrl || resolveUrl(form.avatarUrl)"
               />
               <div v-else class="d-flex align-center justify-center text-center text-caption" style="height: 52px;" :style="`color: ${errors.cover ? '#b00020' : '#5a3840'};`">
                 <div>
@@ -64,19 +65,25 @@
         <p class="text-body-2 font-weight-bold mb-2" style="color: #1e1012;">Club Description</p>
         <v-textarea
           v-model="form.description"
-          :error-messages="errors.description"
           bg-color="white"
           class="mb-4"
           density="compact"
+          :error-messages="errors.description"
           placeholder="Tell us about your club: what you'll read, how often you meet, what topics you discuss..."
-          rows="3"
           rounded="lg"
+          rows="3"
           variant="solo"
           @input="errors.description = ''"
         />
 
         <p class="text-body-2 font-weight-bold mb-2" style="color: #1e1012;">Club Genres</p>
-        <v-card :style="errors.genres ? 'border: 1px solid #b00020;' : ''" bg-color="white" elevation="0" rounded="lg" class="pa-3 mb-4">
+        <v-card
+          bg-color="white"
+          class="pa-3 mb-4"
+          elevation="0"
+          rounded="lg"
+          :style="errors.genres ? 'border: 1px solid #b00020;' : ''"
+        >
           <p v-if="errors.genres" class="text-caption mb-2" style="color: #b00020;">{{ errors.genres }}</p>
           <div class="d-flex flex-wrap align-center ga-2">
             <v-chip
@@ -93,23 +100,23 @@
               <template #activator="{ props }">
                 <span class="text-caption" style="cursor: pointer; color: #7B5B65;" v-bind="props">Add more ...</span>
               </template>
-              <v-card min-width="240" class="pa-2" elevation="4" rounded="lg">
+              <v-card class="pa-2" elevation="4" min-width="240" rounded="lg">
                 <v-text-field
                   v-model="tagSearch"
                   autofocus
+                  class="mb-2"
                   density="compact"
                   hide-details
                   placeholder="Search genres..."
                   variant="outlined"
-                  class="mb-2"
                   @input="filterTags"
                 />
                 <v-list density="compact" style="max-height: 200px; overflow-y: auto;">
                   <v-list-item
                     v-for="tag in filteredTags"
                     :key="tag.Id"
-                    :title="tag.Name"
                     rounded="lg"
+                    :title="tag.Name"
                     @click="addTag(tag)"
                   />
                   <v-list-item v-if="!filteredTags.length" disabled title="No genres found" />
@@ -123,28 +130,28 @@
         <v-row class="mb-6">
           <v-col cols="6">
             <v-card
+              class="pa-4 text-center"
               :color="!form.isPublic ? '#4A2B33' : '#7B5B65'"
               elevation="0"
               rounded="lg"
-              class="pa-4 text-center"
               style="cursor: pointer;"
               @click="form.isPublic = false"
             >
-              <v-icon color="white" class="mb-1">mdi-lock-outline</v-icon>
+              <v-icon class="mb-1" color="white">mdi-lock-outline</v-icon>
               <p class="text-body-2 font-weight-bold text-white">Private</p>
               <p class="text-caption text-white" style="opacity: 0.8;">Only the owner can share the invite link</p>
             </v-card>
           </v-col>
           <v-col cols="6">
             <v-card
+              class="pa-4 text-center"
               :color="form.isPublic ? '#4A2B33' : '#7B5B65'"
               elevation="0"
               rounded="lg"
-              class="pa-4 text-center"
               style="cursor: pointer;"
               @click="form.isPublic = true"
             >
-              <v-icon color="white" class="mb-1">mdi-book-open-outline</v-icon>
+              <v-icon class="mb-1" color="white">mdi-book-open-outline</v-icon>
               <p class="text-body-2 font-weight-bold text-white">Public</p>
               <p class="text-caption text-white" style="opacity: 0.8;">Any member can share the invite link</p>
             </v-card>
@@ -162,8 +169,20 @@
           >
             {{ mode === 'create' ? 'Create club' : 'Save' }}
           </v-btn>
-          <v-btn v-if="mode === 'create'" color="#7B5B65" rounded="lg" style="color: white;" to="/clubs">Cancel</v-btn>
-          <v-btn v-else color="#7B5B65" rounded="lg" style="color: white;" @click="router.back()">Cancel</v-btn>
+          <v-btn
+            v-if="mode === 'create'"
+            color="#7B5B65"
+            rounded="lg"
+            style="color: white;"
+            to="/clubs"
+          >Cancel</v-btn>
+          <v-btn
+            v-else
+            color="#7B5B65"
+            rounded="lg"
+            style="color: white;"
+            @click="router.back()"
+          >Cancel</v-btn>
         </div>
 
         <p v-if="mode === 'create'" class="text-caption" style="color: #3a1e24;">
@@ -181,18 +200,15 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue';
+  import { onMounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
   import { apiFetch } from '@/plugins/api';
 
   interface Tag { Id: string; Name: string; Type: string }
-  interface StoredUser { username: string; email: string; AvatarUrl: string | null }
 
   const props = defineProps<{ mode: 'create' | 'edit'; clubId?: string }>();
 
   const router = useRouter();
-  const myId = ref('');
-  const currentUser = ref<StoredUser | null>(null);
   const submitting = ref(false);
   const loaded = ref(false);
   const fileInput = ref<HTMLInputElement | null>(null);
@@ -213,20 +229,6 @@
   const tagSearch = ref('');
   const tagMenuOpen = ref(false);
   const filteredTags = ref<Tag[]>([]);
-
-  const menuUser = computed(() => currentUser.value && myId.value ? {
-    id: myId.value,
-    username: currentUser.value.username,
-    email: currentUser.value.email,
-    AvatarUrl: currentUser.value.AvatarUrl,
-  } : null);
-
-  function handleLogout () {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    router.push('/');
-  }
 
   function resolveUrl (url: string | null): string {
     if (!url) return '';
@@ -311,12 +313,7 @@
   }
 
   onMounted(async () => {
-    const stored = localStorage.getItem('user');
-    if (stored) currentUser.value = JSON.parse(stored);
     try {
-      const profileData = await apiFetch('/user/profile') as { user: { Id: string } };
-      myId.value = profileData.user.Id;
-
       if (props.mode === 'edit' && props.clubId) {
         const [clubData, genreTags] = await Promise.all([
           apiFetch(`/clubs/${props.clubId}`) as Promise<any>,

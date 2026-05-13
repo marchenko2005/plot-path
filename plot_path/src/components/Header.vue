@@ -21,8 +21,8 @@
           <template v-if="accessToken && user">
             <NotificationBell />
             <UserAvatarMenu
-              :user="user"
               :unread-messages="unreadMessages"
+              :user="user"
               @logout="handleLogout"
             />
           </template>
