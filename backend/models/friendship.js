@@ -149,7 +149,19 @@ const friendship = {
             FROM ClubMembers c1
             JOIN ClubMembers c2 ON c1.ClubId = c2.ClubId
             WHERE c1.UserId = @UserId AND c2.UserId = u.Id
-          ) AS SharedClubs
+          ) AS SharedClubs,
+          (
+            SELECT COUNT(*)
+            FROM BookReviews r1
+            JOIN BookReviews r2 ON r1.BookId = r2.BookId
+            WHERE r1.UserId = @UserId AND r2.UserId = u.Id
+          ) AS SharedBooks,
+          (
+            SELECT AVG(ABS(CAST(r1.Rating AS FLOAT) - CAST(r2.Rating AS FLOAT)))
+            FROM BookReviews r1
+            JOIN BookReviews r2 ON r1.BookId = r2.BookId
+            WHERE r1.UserId = @UserId AND r2.UserId = u.Id
+          ) AS AvgRatingDiff
         FROM Users u
         WHERE u.Id != @UserId
           AND NOT EXISTS (
@@ -168,7 +180,9 @@ const friendship = {
     return result.recordset
       .map(u => {
         const tagUnion = u.MyTags + u.TheirTags - u.SharedTags;
-        const compatibility = tagUnion > 0 ? Math.round((u.SharedTags / tagUnion) * 100) : 0;
+        const tagJaccard = tagUnion > 0 ? u.SharedTags / tagUnion : 0;
+        const ratingSimilarity = u.SharedBooks > 0 ? Math.max(0, 1 - u.AvgRatingDiff / 4) : 0;
+        const compatibility = Math.round((tagJaccard * 0.6 + ratingSimilarity * 0.4) * 100);
         return {
           Id:            u.Id,
           Username:      u.Username,
