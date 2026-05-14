@@ -3,6 +3,29 @@ const config = require('../db/sqlConfig');
 const { processBadge } = require('../models/achievementProgress');
 const routeModel = require('../models/route');
 const { v4: uuidv4 } = require('uuid');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '..', 'uploads', 'avatars');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${req.user.userId}${ext}`);
+  },
+});
+const avatarUpload = multer({
+  storage: avatarStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  },
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
 
 const userController = {
   async getProfile(req, res) {
@@ -137,6 +160,24 @@ const userController = {
     } catch (error) {
       console.error('Error fetching public profile:', error);
       res.status(500).json({ error: 'Failed to fetch user profile' });
+    }
+  },
+
+  uploadAvatarMiddleware: avatarUpload.single('avatar'),
+
+  async uploadAvatar(req, res) {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    try {
+      const pool = await sql.connect(config);
+      await pool.request()
+        .input('AvatarUrl', sql.NVarChar, avatarUrl)
+        .input('UserId', sql.UniqueIdentifier, req.user.userId)
+        .query('UPDATE Users SET AvatarUrl = @AvatarUrl WHERE Id = @UserId');
+      res.json({ avatarUrl });
+    } catch (err) {
+      console.error('[uploadAvatar] error:', err);
+      res.status(500).json({ error: 'Failed to save avatar' });
     }
   },
 

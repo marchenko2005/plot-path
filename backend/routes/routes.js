@@ -15,6 +15,9 @@ router.post('/start/:routeId', authenticate, routeController.startRoute);
 // Отримати прогрес за маршрутом
 router.get('/progress/:routeId', authenticate, routeController.getRouteProgress);
 
+// Згенерувати персоналізовані маршрути для поточного юзера вручну
+router.post('/generate', authenticate, routeController.generateForCurrentUser);
+
 // Отримати маршрут  місяця
 router.get('/monthly', routeController.getMonthlyRoute);
 

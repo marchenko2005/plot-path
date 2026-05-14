@@ -44,7 +44,7 @@
   const reviewTextError = ref(false);
 
   const avatarSrc = computed(() =>
-    props.avatarUrl || 'http://localhost:3001/uploads/avatars/default_ava.jpg'
+    props.avatarUrl || 'http://localhost:3000/uploads/avatars/default_ava.jpg'
   );
 
   const API = 'http://localhost:3000/api';

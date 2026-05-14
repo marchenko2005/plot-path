@@ -3,6 +3,7 @@ const config = require('../db/sqlConfig');
 const friendshipModel = require('../models/friendship');
 const notificationModel = require('../models/notification');
 const { emitToUser } = require('../socket');
+const { getCachedSuggestions } = require('./friendSuggestionGenerator');
 
 async function getUserSnippet(pool, userId) {
   const result = await pool.request()
@@ -132,8 +133,9 @@ module.exports = {
   // GET /api/friends/suggestions
   async getFriendSuggestions(req, res) {
     try {
-      const limit = Math.min(parseInt(req.query.limit) || 10, 50);
-      const suggestions = await friendshipModel.getSuggestions(req.user.userId, limit);
+      const userId = req.user.userId;
+      const cached = getCachedSuggestions(userId);
+      const suggestions = cached ?? await friendshipModel.getSuggestions(userId, 3);
       res.json(suggestions);
     } catch (err) {
       console.error('[Friends] getFriendSuggestions error:', err);

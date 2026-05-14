@@ -203,8 +203,8 @@
   const messagesEl = ref<HTMLElement | null>(null);
 
   function resolveAvatar (url: string | null) {
-    if (!url) return 'http://localhost:3001/uploads/avatars/default_ava.jpg';
-    if (url.startsWith('/uploads')) return `http://localhost:3001${url}`;
+    if (!url) return 'http://localhost:3000/uploads/avatars/default_ava.jpg';
+    if (url.startsWith('/uploads')) return `http://localhost:3000${url}`;
     return url;
   }
 

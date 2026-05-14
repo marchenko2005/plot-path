@@ -11,6 +11,7 @@ const { initSocket } = require('./socket');
 require('./controllers/dailyRouteGenerator');
 require('./controllers/monthlyRouteGenerator');
 require('./controllers/clubBookChecker');
+require('./controllers/friendSuggestionGenerator');
 
 dotenv.config();
 

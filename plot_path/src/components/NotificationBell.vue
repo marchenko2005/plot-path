@@ -85,8 +85,8 @@
   const pending = ref<string | null>(null);
 
   function resolveAvatar(url: string | null) {
-    if (!url) return 'http://localhost:3001/uploads/avatars/default_ava.jpg';
-    return url.startsWith('/uploads') ? `http://localhost:3001${url}` : url;
+    if (!url) return 'http://localhost:3000/uploads/avatars/default_ava.jpg';
+    return url.startsWith('/uploads') ? `http://localhost:3000${url}` : url;
   }
 
   async function loadRequests() {

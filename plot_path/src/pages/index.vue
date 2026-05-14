@@ -25,6 +25,7 @@
   import { useRouter } from 'vue-router';
   import { useI18n } from 'vue-i18n';
   import type { Book } from '@/types/general.interface';
+  import { resolveUrl } from '@/utils/url';
 
   const API = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('accessToken') || '';
@@ -32,6 +33,7 @@
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+  const { t } = useI18n();
   const router = useRouter();
   const links = computed(() => [
     { label: t('header.links.about'), path: '#about' },
@@ -55,9 +57,7 @@
       console.log('[fetchBooks] Raw data:', data);
 
       return data.books.map((book: any) => {
-        const fullCoverUrl = book.CoverUrl?.startsWith('/uploads')
-          ? `${import.meta.env.VITE_BASE_URL}${book.CoverUrl}`
-          : book.CoverUrl;
+        const fullCoverUrl = resolveUrl(book.CoverUrl);
 
         console.log('[fetchBooks] Final cover URL:', fullCoverUrl);
 

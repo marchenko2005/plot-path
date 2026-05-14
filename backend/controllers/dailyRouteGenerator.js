@@ -27,7 +27,6 @@ async function generateDailyRoutes() {
 
 // Генерує 3 маршрути: жанровий, троповий, комбінований
 async function generateRoutesForUser(userId, pool) {
-  // Видаляємо не початі маршрути
   await pool.request()
     .input('UserId', sql.UniqueIdentifier, userId)
     .query(`
@@ -36,7 +35,6 @@ async function generateRoutesForUser(userId, pool) {
       WHERE ur.UserId = @UserId AND ur.Status = 'planned' AND r.IsMonthly = 0
     `);
 
-  // Жанр
   const genreResult = await pool.request()
     .input('UserId', sql.UniqueIdentifier, userId)
     .query(`
@@ -46,7 +44,6 @@ async function generateRoutesForUser(userId, pool) {
       ORDER BY NEWID()
     `);
 
-  // Троп
   const tropeResult = await pool.request()
     .input('UserId', sql.UniqueIdentifier, userId)
     .query(`
@@ -61,48 +58,48 @@ async function generateRoutesForUser(userId, pool) {
 
   if (!genre && !trope) return;
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const selected = [
-    { name: 'Top Genre Route', tag: genre },
-    { name: 'Top Trope Route', tag: trope },
-    { name: 'Combined Route', tags: genre && trope ? [genre, trope] : null }
+    { name: 'Top Genre Route',  tag: genre,  category: genre?.Name },
+    { name: 'Top Trope Route',  tag: trope,  category: trope?.Name },
+    { name: 'Combined Route',   tags: genre && trope ? [genre, trope] : null,
+      category: genre && trope ? `${genre.Name} + ${trope.Name}`.slice(0, 50) : null },
   ];
 
   for (const entry of selected) {
-    if (entry.tags) {
-      const [g, t] = entry.tags;
-
-      const booksResult = await pool.request()
-        .input('GenreId', sql.UniqueIdentifier, g.Id)
-        .input('TropeId', sql.UniqueIdentifier, t.Id)
-        .query(`
-          SELECT DISTINCT b.Id
-          FROM BookTags bt
-          JOIN Books b ON b.Id = bt.BookId
-          WHERE bt.TagId = @GenreId OR bt.TagId = @TropeId
-        `);
-
-      if (booksResult.recordset.length === 0) continue;
-
-      const limitedBooks = getRandomBooks(booksResult.recordset, 3, 6);
-      const routeId = uuidv4();
-      await createRouteAndAssign(userId, routeId, `${entry.name} - ${new Date().toISOString().slice(0, 10)}`, `${g.Name} + ${t.Name}`, limitedBooks, pool);
-    } else if (entry.tag) {
-      const tag = entry.tag;
-
-      const booksResult = await pool.request()
-        .input('TagId', sql.UniqueIdentifier, tag.Id)
-        .query(`
-          SELECT DISTINCT b.Id
-          FROM BookTags bt
-          JOIN Books b ON bt.BookId = b.Id
-          WHERE bt.TagId = @TagId
-        `);
-
-      if (booksResult.recordset.length === 0) continue;
-
-      const limitedBooks = getRandomBooks(booksResult.recordset, 3, 6);
-      const routeId = uuidv4();
-      await createRouteAndAssign(userId, routeId, `${entry.name} - ${new Date().toISOString().slice(0, 10)}`, tag.Name, limitedBooks, pool);
+    try {
+      if (entry.tags) {
+        const [g, t] = entry.tags;
+        const booksResult = await pool.request()
+          .input('GenreId', sql.UniqueIdentifier, g.Id)
+          .input('TropeId', sql.UniqueIdentifier, t.Id)
+          .query(`
+            SELECT DISTINCT b.Id
+            FROM BookTags bt
+            JOIN Books b ON b.Id = bt.BookId
+            WHERE bt.TagId = @GenreId OR bt.TagId = @TropeId
+          `);
+        if (booksResult.recordset.length === 0) { console.log(`[Generator] No books for combined ${g.Name}+${t.Name}, skipping`); continue; }
+        const books = getRandomBooks(booksResult.recordset, 3, 6);
+        await createRouteAndAssign(userId, uuidv4(), `${entry.name} - ${today}`, entry.category, books, pool);
+        console.log(`[Generator] Created combined route for user ${userId}`);
+      } else if (entry.tag) {
+        const booksResult = await pool.request()
+          .input('TagId', sql.UniqueIdentifier, entry.tag.Id)
+          .query(`
+            SELECT DISTINCT b.Id
+            FROM BookTags bt
+            JOIN Books b ON bt.BookId = b.Id
+            WHERE bt.TagId = @TagId
+          `);
+        if (booksResult.recordset.length === 0) { console.log(`[Generator] No books for tag ${entry.tag.Name}, skipping`); continue; }
+        const books = getRandomBooks(booksResult.recordset, 3, 6);
+        await createRouteAndAssign(userId, uuidv4(), `${entry.name} - ${today}`, entry.category, books, pool);
+        console.log(`[Generator] Created ${entry.name} for user ${userId}`);
+      }
+    } catch (err) {
+      console.error(`[Generator] Failed to create "${entry.name}" for user ${userId}:`, err.message);
     }
   }
 }

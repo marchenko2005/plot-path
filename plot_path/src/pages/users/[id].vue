@@ -20,12 +20,27 @@
                 <img
                   :alt="profile.user.Username"
                   :src="profile.user.AvatarUrl
-                    ? `http://localhost:3001${profile.user.AvatarUrl}`
-                    : 'http://localhost:3001/uploads/avatars/default_ava.jpg'"
+                    ? `http://localhost:3000${profile.user.AvatarUrl}`
+                    : 'http://localhost:3000/uploads/avatars/default_ava.jpg'"
                 >
               </v-avatar>
 
               <div class="username">{{ profile.user.Username }}</div>
+
+              <v-tooltip v-if="compatibility !== null" location="bottom">
+                <template #activator="{ props: tp }">
+                  <div
+                    class="compatibility-chip"
+                    v-bind="tp"
+                    :class="{
+                      'compatibility-chip--high': compatibility >= 70,
+                      'compatibility-chip--mid': compatibility >= 40 && compatibility < 70,
+                      'compatibility-chip--low': compatibility < 40,
+                    }"
+                  >{{ compatibility }}% reading compatibility</div>
+                </template>
+                <span>Based on shared tags and book ratings</span>
+              </v-tooltip>
 
               <div class="actions">
                 <v-btn
@@ -158,6 +173,7 @@
 
   const friends = ref<Friend[]>([]);
   const bookClubs = ref<BookClub[]>([]);
+  const compatibility = ref<number | null>(null);
 
   const awards = computed<DisplayBadge[]>(() =>
     (profile.value?.badges ?? []).map(b => ({
@@ -173,7 +189,7 @@
       routeBooks.value = data.books.map((book: any) => ({
         ...book,
         CoverUrl: book.CoverUrl?.startsWith('/uploads')
-          ? `${import.meta.env.VITE_BASE_URL}${book.CoverUrl}`
+          ? `http://localhost:3000${book.CoverUrl}`
           : book.CoverUrl,
       }));
     } catch {
@@ -187,6 +203,7 @@
     profile.value = null;
     routeBooks.value = [];
     friends.value = [];
+    compatibility.value = null;
     try {
       profile.value = await apiFetch(`/user/${id}/public`) as PublicProfile;
       friendshipStatus.value = profile.value.friendshipStatus ?? 'none';
@@ -194,8 +211,12 @@
       friends.value = profile.value.friends.map(f => ({
         id: f.Id,
         name: f.Username,
-        avatarUrl: f.AvatarUrl ? `http://localhost:3001${f.AvatarUrl}` : null,
+        avatarUrl: f.AvatarUrl ? `http://localhost:3000${f.AvatarUrl}` : null,
       }));
+      try {
+        const compat = await apiFetch(`/user/${id}/compatibility`) as { score: number };
+        compatibility.value = compat.score;
+      } catch { /* not critical */ }
       if (profile.value.activeRoutes[0]) {
         await fetchRouteBooks(profile.value.activeRoutes[0].Id);
       }
@@ -250,6 +271,18 @@
     font-weight: 700;
     color: #1a1a1a;
     text-align: center;
+  }
+
+  .compatibility-chip {
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    cursor: default;
+
+    &--high { background: #e8f5e9; color: #2e7d32; }
+    &--mid  { background: #fff8e1; color: #f57f17; }
+    &--low  { background: #fce4ec; color: #c62828; }
   }
 
   .actions {

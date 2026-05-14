@@ -6,8 +6,8 @@
         <img
           :alt="review.UserName"
           :src="review.UserAvatar
-            ? `http://localhost:3001${review.UserAvatar}`
-            : 'http://localhost:3001/uploads/avatars/default_ava.jpg'"
+            ? `http://localhost:3000${review.UserAvatar}`
+            : 'http://localhost:3000/uploads/avatars/default_ava.jpg'"
         >
       </v-avatar>
       <div>

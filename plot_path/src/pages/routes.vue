@@ -3,6 +3,13 @@
     <Header :links="links" show-image />
     <h3 class="routes-page__title">
       Welcome back, <span class="primary">{{ profile?.Username || 'Reader' }}</span>!
+      <v-btn
+        class="ml-4"
+        :loading="generating"
+        size="small"
+        variant="outlined"
+        @click="generateRoutes"
+      >Refresh routes</v-btn>
     </h3>
 
     <div id="about" class="routes-page__description">
@@ -80,7 +87,7 @@
   ] as const;
 
   const API = import.meta.env.VITE_API_URL;
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  const BASE_URL = 'http://localhost:3000';
   const token = localStorage.getItem('accessToken') || '';
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -93,6 +100,7 @@
   const { show } = useModal();
 
   const profile = ref<any>(null);
+  const generating = ref(false);
   const personalizedRoutes = ref<Route[]>([]);
   const monthlyRoute = ref<Route | null>(null);
   const routeBooks = ref<Record<string, Book[]>>({});
@@ -136,6 +144,22 @@
       console.error('[routes.vue] Error loading data:', error);
     }
   });
+
+  const generateRoutes = async () => {
+    generating.value = true;
+    try {
+      await fetch(`${API}/routes/generate`, { method: 'POST', headers });
+      const routeData = await fetch(`${API}/routes/daily`, { headers }).then(r => r.json());
+      personalizedRoutes.value = routeData.personalized.slice(0, 3);
+      const ids = personalizedRoutes.value.map(r => r.Id);
+      const results = await Promise.all(ids.map(id => fetchBooks(id)));
+      ids.forEach((id, i) => { routeBooks.value[id] = results[i]; });
+    } catch (err) {
+      console.error('[routes] generate error:', err);
+    } finally {
+      generating.value = false;
+    }
+  };
 
   const startRoute = async (routeId: string) => {
     try {

@@ -58,9 +58,9 @@
   const emit = defineEmits<{ logout: [] }>();
 
   const avatarUrl = computed(() => {
-    if (!props.user.AvatarUrl) return 'http://localhost:3001/uploads/avatars/default_ava.jpg';
+    if (!props.user.AvatarUrl) return 'http://localhost:3000/uploads/avatars/default_ava.jpg';
     return props.user.AvatarUrl.startsWith('/uploads')
-      ? `http://localhost:3001${props.user.AvatarUrl}`
+      ? `http://localhost:3000${props.user.AvatarUrl}`
       : props.user.AvatarUrl;
   });
 </script>

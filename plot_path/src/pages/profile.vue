@@ -6,9 +6,21 @@
         <!-- Left Sidebar -->
         <v-col class="sidebar" cols="12" md="4">
           <div class="avatar-section">
-            <v-avatar size="64">
-              <img alt="User Avatar" :src="user.AvatarUrl ? user.AvatarUrl : '/uploads/avatars/default_ava.jpg'">
-            </v-avatar>
+            <div class="avatar-wrapper" @click="$refs.avatarInput.click()">
+              <v-avatar size="64">
+                <img alt="User Avatar" :src="user.AvatarUrl ? resolveUrl(user.AvatarUrl) : '/uploads/avatars/default_ava.jpg'">
+              </v-avatar>
+              <div class="avatar-overlay">
+                <v-icon color="white" size="20">mdi-camera</v-icon>
+              </div>
+            </div>
+            <input
+              ref="avatarInput"
+              accept="image/*"
+              hidden
+              type="file"
+              @change="uploadAvatar"
+            >
             <div>
               <div class="name">{{ user.Username }}</div>
               <div class="email-small">{{ user.Email }}</div>
@@ -98,6 +110,31 @@
           </div>
 
           <ProfileFriends :friends="friends" />
+
+          <div v-if="suggestions.length" class="suggestions-section mt-6">
+            <div class="suggestions-title">People You May Know</div>
+            <div class="suggestions-list">
+              <div v-for="s in suggestions" :key="s.Id" class="suggestion-card">
+                <router-link :to="`/users/${s.Id}`">
+                  <v-avatar size="48">
+                    <img :alt="s.Username" :src="s.AvatarUrl ? `http://localhost:3000${s.AvatarUrl}` : '/uploads/avatars/default_ava.jpg'">
+                  </v-avatar>
+                </router-link>
+                <div class="suggestion-info">
+                  <router-link class="suggestion-name" :to="`/users/${s.Id}`">{{ s.Username }}</router-link>
+                  <span class="suggestion-mutual">{{ s.MutualFriends }} mutual friend{{ s.MutualFriends !== 1 ? 's' : '' }}</span>
+                  <span v-if="s.Compatibility > 0" class="suggestion-compat">{{ s.Compatibility }}% reading compatibility</span>
+                </div>
+                <v-btn
+                  density="compact"
+                  rounded
+                  size="small"
+                  variant="outlined"
+                  @click="addFriend(s.Id)"
+                >Add</v-btn>
+              </div>
+            </div>
+          </div>
         </v-col>
       </v-row>
 
@@ -133,8 +170,10 @@
   import { onMounted, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import type { Route, Tag, User } from '@/types/user.interface';
+  import { useUserStore } from '@/store/user';
 
   const { t } = useI18n();
+  const userStore = useUserStore();
   import type { Book } from '@/types/general.interface';
   import { apiFetch } from '@/plugins/api';
   import { resolveUrl } from '@/utils/url';
@@ -163,6 +202,16 @@
   const books3 = ref<Book[]>([]);
   const bookClubs = ref<BookClub[]>([]);
   const friends = ref<Friend[]>([]);
+
+  interface Suggestion {
+    Id: string
+    Username: string
+    AvatarUrl: string | null
+    MutualFriends: number
+    Score: number
+    Compatibility: number
+  }
+  const suggestions = ref<Suggestion[]>([]);
 
   const fetchAllTags = async () => {
     try {
@@ -203,7 +252,7 @@
         Name: badge.Name,
         Description: badge.Description ?? '',
         ImageUrl: badge.ImageUrl
-          ? `http://localhost:3001${badge.ImageUrl}`
+          ? `http://localhost:3000${badge.ImageUrl}`
           : '/images/default_badge.png',
       }));
     } catch (err) {
@@ -216,7 +265,7 @@
     return data.books.map((book: any) => ({
       ...book,
       CoverUrl: book.CoverUrl?.startsWith('/uploads')
-        ? `${import.meta.env.VITE_BASE_URL}${book.CoverUrl}`
+        ? `http://localhost:3000${book.CoverUrl}`
         : book.CoverUrl,
       progressPercent: data.progressPercent || null,
     }));
@@ -269,16 +318,58 @@
     }
   };
 
+  const uploadAvatar = async (event: Event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('avatar', file);
+    try {
+      const token = localStorage.getItem('accessToken') || '';
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/user/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (user.value) user.value.AvatarUrl = data.avatarUrl;
+      if (userStore.user) {
+        userStore.user.AvatarUrl = data.avatarUrl;
+        const cached = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem('user', JSON.stringify({ ...cached, AvatarUrl: data.avatarUrl }));
+      }
+    } catch (err) {
+      console.error('[profile.vue] Failed to upload avatar:', err);
+    }
+  };
+
   const fetchFriends = async () => {
     try {
       const data = await apiFetch('/friends') as { Id: string; Username: string; AvatarUrl: string | null }[];
       friends.value = data.map(f => ({
         id: f.Id,
         name: f.Username,
-        avatarUrl: f.AvatarUrl ? `http://localhost:3001${f.AvatarUrl}` : null,
+        avatarUrl: f.AvatarUrl ? `http://localhost:3000${f.AvatarUrl}` : null,
       }));
     } catch (err) {
       console.error('[profile.vue] Failed to fetch friends:', err);
+    }
+  };
+
+  const fetchSuggestions = async () => {
+    try {
+      const data = await apiFetch('/friends/suggestions') as Suggestion[];
+      suggestions.value = data;
+    } catch (err) {
+      console.error('[profile.vue] Failed to fetch suggestions:', err);
+    }
+  };
+
+  const addFriend = async (userId: string) => {
+    try {
+      await apiFetch(`/friends/request/${userId}`, { method: 'POST' });
+      suggestions.value = suggestions.value.filter(s => s.Id !== userId);
+    } catch (err) {
+      console.error('[profile.vue] Failed to send friend request:', err);
     }
   };
 
@@ -298,6 +389,7 @@
     await fetchBadges();
     await fetchFriends();
     await fetchBookClubs();
+    await fetchSuggestions();
   });
 </script>
 
@@ -321,6 +413,29 @@
 
 /* ── Sidebar ── */
 .sidebar {
+  .avatar-wrapper {
+    position: relative;
+    cursor: pointer;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    &:hover .avatar-overlay {
+      opacity: 1;
+    }
+  }
+
   .avatar-section {
     display: flex;
     align-items: center;
@@ -389,6 +504,57 @@
     .meta-empty {
       font-size: 0.82rem;
       color: #aaa;
+    }
+  }
+}
+
+/* ── Suggestions ── */
+.suggestions-section {
+  .suggestions-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  .suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .suggestion-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f9f4f5;
+    border-radius: 12px;
+    padding: 10px 14px;
+
+    .suggestion-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .suggestion-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      text-decoration: none;
+      &:hover { text-decoration: underline; }
+    }
+
+    .suggestion-mutual {
+      font-size: 0.75rem;
+      color: #888;
+    }
+
+    .suggestion-compat {
+      font-size: 0.73rem;
+      color: #b05070;
+      font-weight: 500;
     }
   }
 }

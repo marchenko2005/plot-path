@@ -15,6 +15,9 @@ router.get('/badges', authenticate, userController.getUserBadges);
 // Залишити відгук і оновити прогрес
 router.post('/routes/:routeId/book/:bookId/review', authenticate, userController.leaveReview);
 
+// Завантажити/змінити аватар
+router.post('/avatar', authenticate, userController.uploadAvatarMiddleware, userController.uploadAvatar);
+
 // Оновити профіль користувача (username, age)
 router.put('/profile', authenticate, userController.updateProfile);
 

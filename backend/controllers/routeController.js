@@ -248,6 +248,26 @@ const routeController = {
         }
         },
 
+    async generateForCurrentUser(req, res) {
+        const userId = req.user.userId;
+        try {
+            const pool = await sql.connect(config);
+            const { generateRoutesForUser } = require('./dailyRouteGenerator');
+            await generateRoutesForUser(userId, pool);
+
+            // Видаляємо сирітські маршрути
+            await pool.request().query(`
+                DELETE FROM Routes
+                WHERE IsMonthly = 0 AND Id NOT IN (SELECT RouteId FROM UserRoutes)
+            `);
+
+            res.json({ message: 'Routes generated successfully' });
+        } catch (err) {
+            console.error('[generateForCurrentUser] Error:', err);
+            res.status(500).json({ error: 'Failed to generate routes' });
+        }
+    },
+
     async getMonthlyRoute(req, res) {
         try {
             const pool = await sql.connect(config);

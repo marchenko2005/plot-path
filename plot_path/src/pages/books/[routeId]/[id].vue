@@ -42,7 +42,7 @@
 
   const normalizeCoverUrl = (url: string | null): string => {
     if (!url) return '';
-    return `${import.meta.env.VITE_BASE_URL}${url}`
+    return `http://localhost:3000${url}`
   };
 
   const loadBook = async () => {

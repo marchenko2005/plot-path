@@ -119,7 +119,7 @@ const friendship = {
   },
 
   // People You May Know: mutual friends × 0.5 + shared tags × 0.3 + shared clubs × 0.2
-  async getSuggestions(userId, limit = 10) {
+  async getSuggestions(userId, limit = 3) {
     const pool = await sql.connect(config);
 
     const result = await pool.request()
@@ -127,6 +127,8 @@ const friendship = {
       .query(`
         SELECT
           u.Id, u.Username, u.AvatarUrl,
+          (SELECT COUNT(*) FROM UserTagPreferences WHERE UserId = @UserId) AS MyTags,
+          (SELECT COUNT(*) FROM UserTagPreferences WHERE UserId = u.Id)   AS TheirTags,
           (
             SELECT COUNT(*)
             FROM Friendships f1
@@ -164,19 +166,24 @@ const friendship = {
       `);
 
     return result.recordset
-      .map(u => ({
-        Id:            u.Id,
-        Username:      u.Username,
-        AvatarUrl:     u.AvatarUrl,
-        MutualFriends: u.MutualFriends,
-        SharedTags:    u.SharedTags,
-        SharedClubs:   u.SharedClubs,
-        Score: Math.round(
-          u.MutualFriends * 0.5 +
-          u.SharedTags    * 0.3 +
-          u.SharedClubs   * 0.2
-        ),
-      }))
+      .map(u => {
+        const tagUnion = u.MyTags + u.TheirTags - u.SharedTags;
+        const compatibility = tagUnion > 0 ? Math.round((u.SharedTags / tagUnion) * 100) : 0;
+        return {
+          Id:            u.Id,
+          Username:      u.Username,
+          AvatarUrl:     u.AvatarUrl,
+          MutualFriends: u.MutualFriends,
+          SharedTags:    u.SharedTags,
+          SharedClubs:   u.SharedClubs,
+          Compatibility: compatibility,
+          Score: Math.round(
+            u.MutualFriends * 0.5 +
+            u.SharedTags    * 0.3 +
+            u.SharedClubs   * 0.2
+          ),
+        };
+      })
       .filter(u => u.Score > 0)
       .sort((a, b) => b.Score - a.Score)
       .slice(0, limit);
