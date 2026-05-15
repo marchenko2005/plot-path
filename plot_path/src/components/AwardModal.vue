@@ -1,7 +1,8 @@
 <template>
   <v-dialog
-    v-model="awardModalStore.visible"
+    :model-value="awardModalStore.visible"
     width="400"
+    @update:model-value="awardModalStore.close()"
   >
     <v-card
       class="text-center"

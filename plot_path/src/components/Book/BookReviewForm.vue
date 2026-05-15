@@ -28,6 +28,10 @@
 
 <script setup lang="ts">
   import { computed, ref } from 'vue';
+  import { resolveUrl } from '@/utils/url';
+  import { useAwardModalStore } from '@/store/awardModalStore';
+
+  const awardModalStore = useAwardModalStore();
 
   const props = defineProps<{
     avatarUrl: string | null;
@@ -44,7 +48,7 @@
   const reviewTextError = ref(false);
 
   const avatarSrc = computed(() =>
-    props.avatarUrl || 'http://localhost:3000/uploads/avatars/default_ava.jpg'
+    props.avatarUrl ? resolveUrl(props.avatarUrl) : 'http://localhost:3000/uploads/avatars/default_ava.jpg'
   );
 
   const API = 'http://localhost:3000/api';
@@ -77,6 +81,13 @@
       reviewText.value = '';
       userRating.value = 0;
       emit('saved');
+
+      for (const badge of (data.newBadges ?? [])) {
+        awardModalStore.show({
+          description: badge.Name,
+          image: badge.ImageUrl || badge.IconUrl || '/images/award_1.webp',
+        });
+      }
     } catch (err) {
       console.error('[BookReviewForm] Error submitting review:', err);
     }

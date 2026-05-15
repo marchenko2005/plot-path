@@ -149,4 +149,4 @@ async function createRouteAndAssign(userId, routeId, name, category, books, pool
 // Запуск щоденно о 01:00
 cron.schedule('0 1 * * *', generateDailyRoutes);
 
-module.exports = { generateDailyRoutes };
+module.exports = { generateDailyRoutes, generateRoutesForUser };

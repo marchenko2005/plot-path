@@ -9,15 +9,27 @@ export interface Achievement {
 export const useAwardModalStore = defineStore('awardModal', () => {
   const visible = ref(false)
   const achievement = ref<Achievement | null>(null)
+  const queue = ref<Achievement[]>([])
 
   function show (ach: Achievement) {
-    achievement.value = ach
-    visible.value = true
+    if (visible.value) {
+      queue.value.push(ach)
+    } else {
+      achievement.value = ach
+      visible.value = true
+    }
   }
 
   function close () {
     visible.value = false
     achievement.value = null
+    if (queue.value.length > 0) {
+      const next = queue.value.shift()!
+      setTimeout(() => {
+        achievement.value = next
+        visible.value = true
+      }, 300)
+    }
   }
 
   return {

@@ -13,7 +13,7 @@
         style="gap: 8px;"
       >
         <v-avatar size="30">
-          <v-img v-if="msg.AvatarUrl" cover :src="msg.AvatarUrl" />
+          <v-img v-if="msg.AvatarUrl" cover :src="resolveUrl(msg.AvatarUrl)" />
           <v-avatar v-else color="secondary" size="30">
             <span class="text-caption text-white">{{ msg.Username[0] }}</span>
           </v-avatar>
@@ -50,6 +50,7 @@
 <script setup lang="ts">
   import { nextTick, ref, watch } from 'vue';
   import type { Message } from '@/types/club';
+  import { resolveUrl } from '@/utils/url';
 
   const props = defineProps<{
     messages: Message[]

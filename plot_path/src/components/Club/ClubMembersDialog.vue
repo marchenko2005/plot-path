@@ -17,7 +17,7 @@
         >
           <template #prepend>
             <v-avatar color="secondary" size="38">
-              <v-img v-if="member.AvatarUrl" cover :src="member.AvatarUrl" />
+              <v-img v-if="member.AvatarUrl" cover :src="resolveUrl(member.AvatarUrl)" />
               <span v-else class="text-caption text-white">{{ member.Username[0] }}</span>
             </v-avatar>
           </template>
@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
   import type { Member } from '@/types/club';
+  import { resolveUrl } from '@/utils/url';
 
   defineProps<{ modelValue: boolean; members: Member[] }>();
   defineEmits<{ 'update:modelValue': [value: boolean] }>();
