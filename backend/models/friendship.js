@@ -118,7 +118,8 @@ const friendship = {
     return result.recordset;
   },
 
-  // People You May Know: mutual friends × 0.5 + shared tags × 0.3 + shared clubs × 0.2
+  // People You May Know: normalized(mutual friends × 0.5 + shared tags × 0.3 + shared clubs × 0.2)
+  // MutualFriendsScore uses time decay: SUM(1 / (1 + months_since_friendship)) — recent connections weigh more
   async getSuggestions(userId, limit = 3) {
     const pool = await sql.connect(config);
 
@@ -130,14 +131,14 @@ const friendship = {
           (SELECT COUNT(*) FROM UserTagPreferences WHERE UserId = @UserId) AS MyTags,
           (SELECT COUNT(*) FROM UserTagPreferences WHERE UserId = u.Id)   AS TheirTags,
           (
-            SELECT COUNT(*)
+            SELECT ISNULL(SUM(1.0 / (1 + DATEDIFF(month, f2.CreatedAt, GETDATE()))), 0)
             FROM Friendships f1
             JOIN Friendships f2
               ON CASE WHEN f1.UserId1 = @UserId THEN f1.UserId2 ELSE f1.UserId1 END
                = CASE WHEN f2.UserId1 = u.Id   THEN f2.UserId2 ELSE f2.UserId1 END
             WHERE (f1.UserId1 = @UserId OR f1.UserId2 = @UserId)
               AND (f2.UserId1 = u.Id   OR f2.UserId2 = u.Id)
-          ) AS MutualFriends,
+          ) AS MutualFriendsScore,
           (
             SELECT COUNT(*)
             FROM UserTagPreferences t1
@@ -177,25 +178,33 @@ const friendship = {
           )
       `);
 
-    return result.recordset
+    const candidates = result.recordset;
+    if (candidates.length === 0) return [];
+
+    const maxMutual = candidates.reduce((m, u) => Math.max(m, u.MutualFriendsScore), 1);
+    const maxTags   = candidates.reduce((m, u) => Math.max(m, u.SharedTags), 1);
+    const maxClubs  = candidates.reduce((m, u) => Math.max(m, u.SharedClubs), 1);
+
+    return candidates
       .map(u => {
         const tagUnion = u.MyTags + u.TheirTags - u.SharedTags;
         const tagJaccard = tagUnion > 0 ? u.SharedTags / tagUnion : 0;
         const ratingSimilarity = u.SharedBooks > 0 ? Math.max(0, 1 - u.AvgRatingDiff / 4) : 0;
         const compatibility = Math.round((tagJaccard * 0.6 + ratingSimilarity * 0.4) * 100);
+
+        const normMutual = u.MutualFriendsScore / maxMutual;
+        const normTags   = u.SharedTags         / maxTags;
+        const normClubs  = u.SharedClubs        / maxClubs;
+
         return {
           Id:            u.Id,
           Username:      u.Username,
           AvatarUrl:     u.AvatarUrl,
-          MutualFriends: u.MutualFriends,
+          MutualFriends: Math.round(u.MutualFriendsScore),
           SharedTags:    u.SharedTags,
           SharedClubs:   u.SharedClubs,
           Compatibility: compatibility,
-          Score: Math.round(
-            u.MutualFriends * 0.5 +
-            u.SharedTags    * 0.3 +
-            u.SharedClubs   * 0.2
-          ),
+          Score: Math.round((normMutual * 0.5 + normTags * 0.3 + normClubs * 0.2) * 100),
         };
       })
       .filter(u => u.Score > 0)
