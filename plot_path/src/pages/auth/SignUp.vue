@@ -8,7 +8,7 @@
           <p class="tagline">{{ t('signup.tagline') }}</p>
           <img
             class="signup-image"
-            src="/public/images/sign_up.webp"
+            src="/images/sign_up.webp"
           >
         </div>
 

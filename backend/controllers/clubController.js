@@ -1,5 +1,8 @@
+const sql = require('mssql');
+const config = require('../db/sqlConfig');
 const clubModel = require('../models/club');
 const { emitToUser, getIO } = require('../socket');
+const { processBadge } = require('../models/achievementProgress');
 
 function requireMember(role) {
   return role !== null;
@@ -201,6 +204,90 @@ module.exports = {
 
       if (allRated) {
         getIO().to(`club:${clubId}`).emit('club:book_completed', { clubId });
+      }
+
+      // Зарахувати оцінку як прогрес у всіх активних маршрутах, що містять цю книгу
+      const userId = req.user.userId;
+      const pool = await sql.connect(config);
+
+      const bookResult = await pool.request()
+        .input('ClubBookId', sql.UniqueIdentifier, clubBookId)
+        .query('SELECT BookId FROM ClubBooks WHERE Id = @ClubBookId');
+
+      if (bookResult.recordset.length > 0) {
+        const bookId = bookResult.recordset[0].BookId;
+
+        const activeRoutes = await pool.request()
+          .input('UserId', sql.UniqueIdentifier, userId)
+          .input('BookId', sql.UniqueIdentifier, bookId)
+          .query(`
+            SELECT ur.RouteId FROM UserRoutes ur
+            JOIN RouteBooks rb ON rb.RouteId = ur.RouteId
+            WHERE ur.UserId = @UserId AND rb.BookId = @BookId AND ur.Status = 'in_progress'
+          `);
+
+        const newBadges = [];
+        const tryBadge = async (name, payload = {}) => {
+          const awarded = await processBadge(userId, name, payload);
+          if (awarded) newBadges.push(awarded);
+        };
+
+        for (const { RouteId: routeId } of activeRoutes.recordset) {
+          await pool.request()
+            .input('UserId', sql.UniqueIdentifier, userId)
+            .input('BookId', sql.UniqueIdentifier, bookId)
+            .input('RouteId', sql.UniqueIdentifier, routeId)
+            .query(`
+              MERGE UserBookProgress AS target
+              USING (SELECT @UserId AS UserId, @BookId AS BookId, @RouteId AS RouteId) AS source
+              ON (target.UserId = source.UserId AND target.BookId = source.BookId AND target.RouteId = source.RouteId)
+              WHEN MATCHED THEN UPDATE SET IsRead = 1, ReadAt = GETDATE()
+              WHEN NOT MATCHED THEN INSERT (UserId, BookId, RouteId, IsRead, ReadAt)
+                VALUES (@UserId, @BookId, @RouteId, 1, GETDATE());
+            `);
+
+          await tryBadge('First Book Completed');
+
+          const booksInRoute = await pool.request()
+            .input('RouteId', sql.UniqueIdentifier, routeId)
+            .query('SELECT BookId FROM RouteBooks WHERE RouteId = @RouteId');
+
+          const completedBooks = await pool.request()
+            .input('UserId', sql.UniqueIdentifier, userId)
+            .input('RouteId', sql.UniqueIdentifier, routeId)
+            .query(`
+              SELECT BookId FROM UserBookProgress
+              WHERE UserId = @UserId AND RouteId = @RouteId AND IsRead = 1
+            `);
+
+          if (completedBooks.recordset.length === booksInRoute.recordset.length) {
+            await pool.request()
+              .input('UserId', sql.UniqueIdentifier, userId)
+              .input('RouteId', sql.UniqueIdentifier, routeId)
+              .query(`
+                UPDATE UserRoutes SET Status = 'completed', CompletedAt = GETDATE()
+                WHERE UserId = @UserId AND RouteId = @RouteId
+              `);
+
+            await tryBadge('First Route Completed');
+
+            const isMonthly = await pool.request()
+              .input('RouteId', sql.UniqueIdentifier, routeId)
+              .query('SELECT IsMonthly FROM Routes WHERE Id = @RouteId');
+
+            if (isMonthly.recordset[0]?.IsMonthly) {
+              await tryBadge('Monthly Champion');
+            }
+
+            await tryBadge('Monthly Route Master');
+            await tryBadge('Speed Reader', { routeId });
+          }
+        }
+
+        await tryBadge('Multiple Genres Explorer');
+
+        res.json({ message: 'Rating saved', allRated, newBadges });
+        return;
       }
 
       res.json({ message: 'Rating saved', allRated });
