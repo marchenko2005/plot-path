@@ -23,6 +23,17 @@
               @rate="submitRating"
             />
             <ClubRecommendations :recommendations="recommendations" />
+            <v-btn
+              block
+              color="#4A2B33"
+              rounded="lg"
+              style="color: white; text-transform: none;"
+              :to="`/clubs/${clubId}/history`"
+              variant="flat"
+            >
+              <v-icon start>mdi-history</v-icon>
+              Reading History
+            </v-btn>
           </div>
 
           <div class="club-right">

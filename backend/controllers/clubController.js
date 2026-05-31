@@ -203,6 +203,7 @@ module.exports = {
       const { allRated } = await clubModel.rateBook(clubId, clubBookId, req.user.userId, rating);
 
       if (allRated) {
+        await clubModel.completeCurrentBook(clubId);
         getIO().to(`club:${clubId}`).emit('club:book_completed', { clubId });
       }
 

@@ -24,12 +24,13 @@ const tagModel = {
         return result.recordset;
     },
 
-    async searchByName(name) {
-    const pool = await sql.connect(config);
-    const result = await pool.request()
-        .input('Name', sql.NVarChar, name)
-        .query('SELECT * FROM Tags WHERE Name LIKE \'%\' + @Name + \'%\'');
-    return result.recordset;
+    async searchByName(name, type = null) {
+        const pool = await sql.connect(config);
+        const req = pool.request().input('Name', sql.NVarChar, name);
+        const typeClause = type ? ' AND Type = @Type' : '';
+        if (type) req.input('Type', sql.NVarChar, type);
+        const result = await req.query(`SELECT * FROM Tags WHERE Name LIKE '%' + @Name + '%'${typeClause}`);
+        return result.recordset;
     }
 
 };

@@ -76,7 +76,7 @@
           @input="errors.description = ''"
         />
 
-        <p class="text-body-2 font-weight-bold mb-2" style="color: #1e1012;">Club Genres</p>
+        <p class="text-body-2 font-weight-bold mb-2" style="color: #1e1012;">Club Tags</p>
         <v-card
           bg-color="white"
           class="pa-3 mb-4"
@@ -85,6 +85,7 @@
           :style="errors.genres ? 'border: 1px solid #b00020;' : ''"
         >
           <p v-if="errors.genres" class="text-caption mb-2" style="color: #b00020;">{{ errors.genres }}</p>
+
           <div class="d-flex flex-wrap align-center ga-2">
             <v-chip
               v-for="tag in selectedTags"
@@ -248,9 +249,19 @@
     errors.value.cover = '';
   }
 
-  function filterTags () {
+  async function filterTags () {
     const q = tagSearch.value.toLowerCase();
     const selectedIds = new Set(selectedTags.value.map(t => t.Id));
+
+    if (q.length >= 2) {
+      try {
+        const found = await apiFetch(`/tags/search/by-name?name=${encodeURIComponent(q)}`) as Tag[];
+        for (const tag of found) {
+          if (!allTags.value.find(t => t.Id === tag.Id)) allTags.value.push(tag);
+        }
+      } catch { /* ignore search errors */ }
+    }
+
     filteredTags.value = allTags.value.filter(
       t => !selectedIds.has(t.Id) && (!q || t.Name.toLowerCase().includes(q)),
     );
@@ -275,7 +286,7 @@
     if (!form.value.name.trim()) { errors.value.name = 'Club name is required'; valid = false; }
     if (props.mode === 'create' && !pendingFile.value) { errors.value.cover = 'Club cover is required'; valid = false; }
     if (!form.value.description.trim()) { errors.value.description = 'Description is required'; valid = false; }
-    if (selectedTags.value.length === 0) { errors.value.genres = 'At least one genre is required'; valid = false; }
+    if (selectedTags.value.length === 0) { errors.value.genres = 'At least one tag is required'; valid = false; }
     return valid;
   }
 
@@ -315,18 +326,18 @@
   onMounted(async () => {
     try {
       if (props.mode === 'edit' && props.clubId) {
-        const [clubData, genreTags] = await Promise.all([
+        const [clubData, tags] = await Promise.all([
           apiFetch(`/clubs/${props.clubId}`) as Promise<any>,
-          apiFetch('/tags/type/Genre') as Promise<Tag[]>,
+          apiFetch('/tags') as Promise<Tag[]>,
         ]);
         form.value.name = clubData.Name;
         form.value.description = clubData.Description || '';
         form.value.avatarUrl = clubData.AvatarUrl;
         form.value.isPublic = !!clubData.IsPublic;
         selectedTags.value = clubData.tags || [];
-        allTags.value = genreTags;
+        allTags.value = tags;
       } else {
-        allTags.value = await apiFetch('/tags/type/Genre') as Tag[];
+        allTags.value = await apiFetch('/tags') as Tag[];
       }
 
       filterTags();

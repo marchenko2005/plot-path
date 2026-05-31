@@ -45,13 +45,13 @@ const tagController = {
 
     //  Пошук тегів за частиною назви
     async searchTags(req, res) {
-        const { name } = req.query;
+        const { name, type } = req.query;
         if (!name || name.length < 2) {
             return res.status(400).json({ error: 'Search term is too short.' });
         }
 
         try {
-            const results = await tagService.searchByName(name);
+            const results = await tagService.searchByName(name, type || null);
             res.json(results);
         } catch (error) {
             console.error('Error searching tags:', error);

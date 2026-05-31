@@ -281,7 +281,20 @@ const club = {
           VALUES (@Id, @ClubId, @ClubBookId, @UserId, @Rating, GETDATE());
       `);
 
-    return {};
+    const [membersRes, ratingsRes] = await Promise.all([
+      pool.request()
+        .input('ClubId', sql.UniqueIdentifier, clubId)
+        .query('SELECT COUNT(*) AS Total FROM ClubMembers WHERE ClubId = @ClubId'),
+      pool.request()
+        .input('ClubBookId', sql.UniqueIdentifier, clubBookId)
+        .query('SELECT COUNT(*) AS Total FROM ClubRatings WHERE ClubBookId = @ClubBookId'),
+    ]);
+
+    const memberCount = membersRes.recordset[0].Total;
+    const ratingCount = ratingsRes.recordset[0].Total;
+    const allRated = memberCount > 0 && ratingCount >= memberCount;
+
+    return { allRated };
   },
 
   async getUserRating(clubBookId, userId) {
